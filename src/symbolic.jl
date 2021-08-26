@@ -55,7 +55,7 @@ function define_μ(N::Int, order::Int, iter=construct_iter_all(N, order))
             sym_name = Symbol('μ', join(map_subscripts(indices[i])))
             sym_raw = Sym{FnType{Tuple{Any}, Real}}(sym_name)
             sym = SymbolicUtils.setmetadata(sym_raw, Symbolics.VariableSource, (:momentclosure, sym_name))
-            μs[idx] = Term{Real}(sym, t)
+            μs[idx] = Term{Real}(sym, [t])
         end
     end
 
@@ -79,7 +79,7 @@ function define_M(N::Int, order::Int, iter=construct_iter_all(N, order))
             sym_raw = Sym{FnType{Tuple{Any}, Real}}(sym_name)
             sym = SymbolicUtils.setmetadata(sym_raw, Symbolics.VariableSource, 
                                             (:momentclosure, sym_name))
-            Ms[idx] = Term{Real}(sym, t)
+            Ms[idx] = Term{Real}(sym, [t])
         end
     end
 
