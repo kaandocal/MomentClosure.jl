@@ -120,31 +120,29 @@ end
     then the function `polynomial_propensities` will throw an error.
 =#
 
-function isconstant(expr::Union{Symbolic, Number}, vars::AbstractVector, iv) :: Bool
+isconstant(expr::Number, vars, iv) = false
+
+function isconstant(expr::Symbolic, vars, iv)
     # Check that the given expression does NOT depend on the given variables `vars` (expr is constant wrt. vars)
     # A variable here is defined as a function of the independent variable `iv`, e.g,  X(t) is variable, where t
     # is the independent variable
+    istree(expr) || return true
 
-    if istree(expr)
-        args = arguments(expr)
-        if length(args) == 1
-            if isequal(args[1], iv)
-                return !isvar(expr, vars)
-            else
-                return isconstant(args[1], vars, iv)
-            end
+    args = arguments(expr)
+    if length(args) == 1
+        if isequal(args[1], iv)
+            return !isvar(expr, vars)
         else
-            return all(arg -> isconstant(arg, vars, iv), args)
+            return isconstant(args[1], vars, iv)
         end
     else
-        return true
+        return all(arg -> isconstant(arg, vars, iv), args)
     end
-
 end
 
-isvar(x::Symbolic, vars::Vector) = any(var -> isequal(x, var), vars)
+isvar(x::Symbolic, vars) = any(var -> isequal(x, var), vars)
 
-function extract_pwr(expr::Symbolic, smap::Dict, vars::Vector, powers::Vector)
+function extract_pwr!(powers, expr::Symbolic, smap, vars)
     args = arguments(expr)
     if isvar(args[1], vars) && args[2] isa Int && args[2] >= 0
         idx = smap[args[1]]
@@ -158,8 +156,7 @@ function extract_pwr(expr::Symbolic, smap::Dict, vars::Vector, powers::Vector)
     end
 end
 
-function extract_mul(expr::Symbolic, smap::Dict, vars::Vector, iv)
-
+function extract_mul(expr::Symbolic, smap, vars, iv)
     powers = zeros(Int, length(smap))
     factors = []
 
@@ -167,7 +164,7 @@ function extract_mul(expr::Symbolic, smap::Dict, vars::Vector, iv)
         if isconstant(arg, vars, iv)
             push!(factors, arg)
         elseif operation(arg) == ^
-            extract_pwr(arg, smap, vars, powers)
+            extract_pwr!(powers, arg, smap, vars)
         elseif isvar(arg, vars)
             powers[smap[arg]] = 1
         else
@@ -177,19 +174,18 @@ function extract_mul(expr::Symbolic, smap::Dict, vars::Vector, iv)
 
     factor = isempty(factors) ? 1 : prod(factors)
     powers, factor
-
 end
 
 
 function polynomial_propensities(a::Vector, rn::Union{ReactionSystem, ReactionSystemMod}; smap=speciesmap(rn))
-
     R = length(a)
     N = numspecies(rn)
+    # Can this replaced by states(rn)?
     vars = [x for (x,y) in Base.sort(collect(smap), by=x->x[2])]
     iv = rn.iv
 
     all_factors = [[] for i = 1:R]
-    all_powers = [[] for i = 1:R]
+    all_powers = [Vector{Int}[] for i = 1:R]
 
     for (rind, expr) in enumerate(a)
 
@@ -209,7 +205,7 @@ function polynomial_propensities(a::Vector, rn::Union{ReactionSystem, ReactionSy
 
             try
                 powers = zeros(Int, N)
-                extract_pwr(expr, smap, vars, powers)
+                extract_pwr!(powers, expr, smap, vars)
                 push!(all_factors[rind], 1)
                 push!(all_powers[rind], powers)
             catch e
@@ -238,7 +234,7 @@ function polynomial_propensities(a::Vector, rn::Union{ReactionSystem, ReactionSy
                         op = operation(term)
                         if op == ^
                             powers = zeros(Int, N)
-                            extract_pwr(term, smap, vars, powers)
+                            extract_pwr!(powers, term, smap, vars)
                             push!(all_factors[rind], 1)
                             push!(all_powers[rind], powers)
                         elseif op == *
