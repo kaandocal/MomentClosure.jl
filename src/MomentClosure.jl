@@ -1,7 +1,7 @@
 module MomentClosure
 
 import Catalyst: species, params, reactions, speciesmap, paramsmap, numspecies,
-				 numreactions, numparams, substoichmat, prodstoichmat, netstoichmat
+				 numreactions, numparams, substoichmat, prodstoichmat, netstoichmat, ReactionSystem, jumpratelaw
 
 using ModelingToolkit
 using Symbolics: value, var_from_nested_derivative, map_subscripts

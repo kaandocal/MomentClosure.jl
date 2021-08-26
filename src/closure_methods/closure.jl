@@ -21,7 +21,8 @@ function close_eqs(sys::MomentEquations, closure_exp::OrderedDict,
 
     vars = sys.odes.states[1:(length(sys.iter_1)+length(sys.iter_m))]
 
-    odes = ODESystem(closed_eqs, iv, vars, ps)
+    odes = ODESystem(closed_eqs, iv, vars, ps;
+                     name=Symbol(sys.name,"_closed"))
 
     ClosedMomentEquations(odes, closure, sys)
 

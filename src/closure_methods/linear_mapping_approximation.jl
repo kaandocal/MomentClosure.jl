@@ -78,7 +78,7 @@ function linear_mapping_approximation(rn_nonlinear::T, rn_linear::T, binary_vars
       iv = sys.odes.iv
       ps = params(rn_nonlinear)
       vars = sys.odes.states
-      odes = ODESystem(LMA_eqs, iv, vars, ps)
+      odes = ODESystem(LMA_eqs, iv, vars, ps; name=Symbol(rn_nonlinear.name,"_lma_",rn_linear.name,"_",m_order))
       new_system = typeof(sys)(odes, field_values[2:end]...)
 
       new_system, sub_params

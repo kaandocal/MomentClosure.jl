@@ -111,7 +111,8 @@ function bernoulli_moment_eqs(sys::MomentEquations, binary_vars::Array{Int,1})
     ps = sys.odes.ps
 
     vars = extract_variables(clean_eqs, sys.N, sys.q_order)
-    odes = ODESystem(clean_eqs, iv, vars, ps)
+    odes = ODESystem(clean_eqs, iv, vars, ps; name=Symbol(sys.odes.name,"_bernoulli"))
+
 
     new_system = typeof(sys)(odes, field_values[2:end]...)
 

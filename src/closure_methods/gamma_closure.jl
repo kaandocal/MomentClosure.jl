@@ -215,7 +215,8 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
         end
 
         vars = extract_variables(closed_eqs, N, sys.q_order)
-        odes = ODESystem(closed_eqs, sys.odes.iv, vars, sys.odes.ps)
+        odes = ODESystem(closed_eqs, sys.odes.iv, vars, sys.odes.ps;
+                         name=Symbol(sys.name,"_gamma_closure"))
 
         return ClosedMomentEquations(odes, closure, sys)
 

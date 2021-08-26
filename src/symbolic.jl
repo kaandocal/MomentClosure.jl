@@ -123,7 +123,7 @@ end
     then the function `polynomial_propensities` will throw an error.
 =#
 
-function isconstant(expr::Union{Symbolic, Number}, vars::Vector, iv::Sym) :: Bool
+function isconstant(expr::Union{Symbolic, Number}, vars::Vector, iv) :: Bool
 
     # Check that the given expression does NOT depend on the given variables `vars` (expr is constant wrt. vars)
     # A variable here is defined as a function of the independent variable `iv`, e.g,  X(t) is variable, where t
@@ -162,7 +162,7 @@ function extract_pwr(expr::Symbolic, smap::Dict, vars::Vector, powers::Vector)
     end
 end
 
-function extract_mul(expr::Symbolic, smap::Dict, vars::Vector, iv::Sym)
+function extract_mul(expr::Symbolic, smap::Dict, vars::Vector, iv)
 
     powers = zeros(Int, length(smap))
     factors = []

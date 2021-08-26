@@ -68,7 +68,7 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
     end
 
     vars = extract_variables(eqs, N, q_order)
-    odes = ODESystem(eqs, rn.iv, vars, rn.ps)
+    odes = ODESystem(eqs, rn.iv, vars, rn.ps; name=Symbol(rn.name,"_raw_moment_eqs_",m_order))
 
     RawMomentEquations(
         odes,
