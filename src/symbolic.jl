@@ -1,6 +1,12 @@
-function gen_iter(n, d)
+import SymbolicUtils: <ₑ
+<ₑ(a::SymbolicUtils.Symbolic, b::Num) = false
+<ₑ(a::Num, b::SymbolicUtils.Symbolic) = true
+
+Base.isequal(a::Symbolics.Add, b::Symbolics.Add) = isequal(a.coeff, b.coeff) && isequal(a.dict, b.dict)
+
+function gen_iter(n::Int, d::Int)
     # based on https://twitter.com/evalparse/status/1107964924024635392
-    iter = []
+    iter = NTuple{n,Int}[]
     for x in partitions(d + n, n)
         x = x .- 1
         if all(x .<= d)
@@ -14,18 +20,16 @@ function gen_iter(n, d)
 end
 
 function construct_iter_all(N::Int, order::Int)
-
     #Construct an ordered iterator going over all moments
     # sequentially in terms of order
 
-    iters = Tuple{repeat([Int], N)...}[]
+    iters = NTuple{N,Int}[]
     for d in 0:order
         x = Base.sort(gen_iter(N, d), rev=true)
-        push!(iters, x...)
+        append!(iters, x)
     end
 
     iters
-
 end
 
 # Trim a string of form "(a, b, c, d, ...)" to "abcd..."
@@ -39,38 +43,30 @@ flatten_mod = Fixpoint(PassThrough(flatten_rule_mod))
 expand_expr = Fixpoint(PassThrough(Chain([expand_mod, flatten_mod])))
 
 function define_μ(N::Int, order::Int, iter=construct_iter_all(N, order))
-
-    indices = String[]
-    for i in iter
-        push!(indices, MomentClosure.trim_key(i))
-    end
+    indices = map(trim_key, iter)
 
     @parameters t
-    t = [t.val]
 
     μs = OrderedDict()
     for (i, idx) in enumerate(iter)
         if sum(idx) == 0
             μs[idx] = 1
         else
-            μs[idx] = Term{Real}(Sym{FnType{Tuple{Any}, Real}}(Symbol("μ$(join(map_subscripts(indices[i]), ""))")), t)
+            sym_name = Symbol('μ', join(map_subscripts(indices[i])))
+            sym_raw = Sym{FnType{Tuple{Any}, Real}}(sym_name)
+            sym = SymbolicUtils.setmetadata(sym_raw, Symbolics.VariableSource, (:momentclosure, sym_name))
+            μs[idx] = Term{Real}(sym, t)
         end
     end
 
     μs
-
 end
 
 
 function define_M(N::Int, order::Int, iter=construct_iter_all(N, order))
-
-    indices = String[]
-    for i in iter
-        push!(indices, MomentClosure.trim_key(i))
-    end
+    indices = map(trim_key, iter)
 
     @parameters t
-    t = [t.val]
 
     Ms = OrderedDict()
     for (i, idx) in enumerate(iter)
@@ -79,17 +75,19 @@ function define_M(N::Int, order::Int, iter=construct_iter_all(N, order))
         elseif sum(idx) == 1
             Ms[idx] = 0
         else
-            Ms[idx] = Term{Real}(Sym{FnType{Tuple{Any}, Real}}(Symbol("M$(join(map_subscripts(indices[i]), ""))")), t)
+            sym_name = Symbol('M', join(map_subscripts(indices[i])))
+            sym_raw = Sym{FnType{Tuple{Any}, Real}}(sym_name)
+            sym = SymbolicUtils.setmetadata(sym_raw, Symbolics.VariableSource, 
+                                            (:momentclosure, sym_name))
+            Ms[idx] = Term{Real}(sym, t)
         end
     end
 
     Ms
-
 end
 
 
 function extract_variables(eqs::Array{Equation, 1}, N::Int, q_order::Int)
-
     iters = construct_iter_all(N, q_order)
     iter_μ = filter(x -> sum(x) > 0, iters)
     iter_M = filter(x -> sum(x) > 1, iters)
@@ -107,7 +105,6 @@ function extract_variables(eqs::Array{Equation, 1}, N::Int, q_order::Int)
 
     vars = intersect!(vars, eq_vars)
     vars
-
 end
 
 ## Set of functions to deconstruct polynomial propensities ##
@@ -123,8 +120,7 @@ end
     then the function `polynomial_propensities` will throw an error.
 =#
 
-function isconstant(expr::Union{Symbolic, Number}, vars::Vector, iv) :: Bool
-
+function isconstant(expr::Union{Symbolic, Number}, vars::AbstractVector, iv) :: Bool
     # Check that the given expression does NOT depend on the given variables `vars` (expr is constant wrt. vars)
     # A variable here is defined as a function of the independent variable `iv`, e.g,  X(t) is variable, where t
     # is the independent variable
@@ -133,12 +129,12 @@ function isconstant(expr::Union{Symbolic, Number}, vars::Vector, iv) :: Bool
         args = arguments(expr)
         if length(args) == 1
             if isequal(args[1], iv)
-                !isvar(expr, vars)
+                return !isvar(expr, vars)
             else
-                isconstant(args[1], vars, iv)
+                return isconstant(args[1], vars, iv)
             end
         else
-            all((isconstant(arg, vars, iv) for arg in args))
+            return all(arg -> isconstant(arg, vars, iv), args)
         end
     else
         return true
@@ -146,7 +142,7 @@ function isconstant(expr::Union{Symbolic, Number}, vars::Vector, iv) :: Bool
 
 end
 
-isvar(x::Symbolic, vars::Vector) = any((isequal(x, var) for var in vars))
+isvar(x::Symbolic, vars::Vector) = any(var -> isequal(x, var), vars)
 
 function extract_pwr(expr::Symbolic, smap::Dict, vars::Vector, powers::Vector)
     args = arguments(expr)
