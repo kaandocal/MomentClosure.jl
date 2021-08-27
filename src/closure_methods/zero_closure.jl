@@ -6,15 +6,16 @@ function zero_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}=
         sys = bernoulli_moment_eqs(sys, binary_vars)
     end
 
-    if typeof(sys) == CentralMomentEquations
+    if sys isa CentralMomentEquations
         for i in get_iter_q(sys)
             closure[sys.M[i]] = 0
             closure_exp[sys.M[i]] = 0
         end
     else
         μ = copy(sys.μ)
-        μ_symbolic = copy(sys.μ)
-        raw_to_central = raw_to_central_moments(sys.N, sys.q_order, get_iter_all(sys), sys.μ)
+        raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys))
+        @show raw_to_central
+        @show μ
 
         unique_iter_q = unique(sort(i) for i in get_iter_q(sys))
         sub = Dict()

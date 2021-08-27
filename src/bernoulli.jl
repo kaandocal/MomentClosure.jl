@@ -25,7 +25,8 @@ function bernoulli_iter_redundant(sys, binary_vars::AbstractVector{Int})
     redundant_iter_sub
 end
 
-function get_redundant_eqs(sys::Union{RawMomentEquations{N}, CentralMomentEquations{N}}, binary_vars) where {N}
+function get_redundant_eqs(sys::Union{RawMomentEquations{N}, CentralMomentEquations{N}}, 
+                           binary_vars) where {N}
     ret = Int[]
 
     for ind in binary_vars
@@ -57,11 +58,12 @@ function bernoulli_reduce(sys::CentralMomentEquations{N}, binary_vars::AbstractV
 
     redundant_eqs = get_redundant_eqs(sys, binary_vars)
 
-    μ_redundant_sub = [sys.μ[key] => sys.μ[val] for (key, val) in redundant_iter_sub]
+    μ = define_μ(N, sys.q_order, get_iter_all(sys))
+    μ_redundant_sub = [μ[key] => μ[val] for (key, val) in redundant_iter_sub]
 
     clean_iter = setdiff(get_iter_M(sys), redundant_iter)
     central_to_raw = central_to_raw_moments(N, sys.q_order, get_iter_all(sys))
-    μ_clean_sub = Dict(sys.μ[iter] => central_to_raw[iter] for iter in clean_iter)
+    μ_clean_sub = Dict(μ[iter] => central_to_raw[iter] for iter in clean_iter)
 
     raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys))
     iter_sub = Dict()
@@ -84,9 +86,10 @@ binary variables (either 0 or 1), apply identities of Bernoulli variables to rem
 ODEs and return the *cleaned up* `MomentEquations`. See [here](@ref geometric-and-conditional) for
 example usage.
 """
-function bernoulli_moment_eqs(sys::MomentEquations, binary_vars::Array{Int,1})
-    return sys
-    @assert false
+function bernoulli_moment_eqs(sys::Union{RawMomentEquations{N}, CentralMomentEquations{N}},
+                              binary_vars::AbstractVector{Int}) where {N}
+    isempty(binary_vars) && return sys
+
     # Construct moment equations removing the redundant ones
     # noting the properties of the Bernoulli variables in the system
 
@@ -103,28 +106,20 @@ function bernoulli_moment_eqs(sys::MomentEquations, binary_vars::Array{Int,1})
     end
 
     # construct a new Raw/Central/MomentEquations system saving only the clean iterators
-    clean_iter = setdiff(sys.iter_all, redundant_iter)
-    iter_m = filter(x -> 2 <= sum(x) <= sys.m_order, clean_iter)
-    iter_q = filter(x -> sys.m_order < sum(x) <= sys.q_order, clean_iter)
-
-    field_values = [getfield(sys, field) for field in fieldnames(typeof(sys))]
-    ind_iter_m = findfirst(x -> x==:iter_m, fieldnames(typeof(sys)))
-    ind_iter_q = findfirst(x -> x==:iter_q, fieldnames(typeof(sys)))
-    ind_iter_all = findfirst(x -> x==:iter_all, fieldnames(typeof(sys)))
-
-    field_values[ind_iter_m] = iter_m       #sys.iter_m
-    field_values[ind_iter_q] = iter_q       #sys.iter_q
-    field_values[ind_iter_all] = clean_iter #sys.iter_all
+    iter_all = setdiff(get_iter_all(sys), redundant_iter)
+    iter_m = setdiff(get_iter_m(sys), redundant_iter)
+    iter_q = setdiff(get_iter_q(sys), redundant_iter)
 
     ## fixing ODE system to preserve consistent ordering of parameters
     iv = get_iv(sys.odes)
     ps = get_ps(sys.odes)
 
-    vars = extract_variables(clean_eqs, sys.N, sys.q_order, clean_iter)
+    vars = extract_variables(clean_eqs, N, sys.q_order, iter_all)
     odes = ODESystem(clean_eqs, iv, vars, ps; name=Symbol(nameof(sys.odes),"_bernoulli"))
 
-    new_system = typeof(sys)(odes, field_values[2:end]...)
-
-    new_system
-
+    if sys isa RawMomentEquations
+        RawMomentEquations{N}(odes, sys.μ, sys.m_order, sys.q_order, iter_all, iter_m, iter_q)
+    else
+        CentralMomentEquations{N}(odes, sys.μ, sys.M, sys.m_order, sys.q_order, iter_all, iter_m, iter_q)
+    end
 end

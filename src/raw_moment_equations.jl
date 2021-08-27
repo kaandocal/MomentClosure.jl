@@ -39,9 +39,12 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
 
     μ = define_μ(N, q_order, iter_all)
 
-    dμ = Dict()
-    for i in chain(iter_1, iter_m)
-        dμ[i] = 0
+    iv = get_iv(rn)
+    D = Differential(iv)
+    eqs = Equation[]
+
+    for i in vcat(iter_1, iter_m)
+        dμi = 0
         for r = 1:numreactions(rn)
             iter_j = filter(x -> all(x .<= i) && sum(x) <= sum(i) - 1, iter_all)
             for j in iter_j
@@ -53,17 +56,11 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
                 for k = 1:length(term_factors[r])
                     suma += term_factors[r][k] * μ[j.+Tuple(term_powers[r][k])]
                 end
-                dμ[i] += factor_j * suma
+                dμi += factor_j * suma
             end
         end
-        dμ[i] = mc_expand(dμ[i])
-    end
 
-    iv = get_iv(rn)
-    D = Differential(iv)
-    eqs = Equation[]
-    for i in chain(iter_1, iter_m)
-        push!(eqs, D(μ[i]) ~ dμ[i])
+        push!(eqs, D(μ[i]) ~ mc_expand(dμi))
     end
 
     vars = extract_variables(eqs, N, q_order, iter_all)

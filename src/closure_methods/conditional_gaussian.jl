@@ -7,9 +7,9 @@ function conditional_gaussian_closure(sys::MomentEquations{N},
 
     sys = bernoulli_moment_eqs(sys, binary_vars)
     # define symbolic raw moment expressions
-    μ = sys.μ 
+    μ = sys isa CentralMomentEquations ? define_μ(N, sys.q_order) : copy(sys.μ)
     # express cumulants in terms of raw moments
-    K = cumulants_to_raw_moments(N, sys.q_order, get_iter_all(sys), μ)
+    K = cumulants_to_raw_moments(N, sys.q_order)
 
     # closure of higher order raw moments without explicit form of truncated moments
     # e.g. μ₁₄ would still be a function of μ₁₃ even though μ₁₃ is also truncated

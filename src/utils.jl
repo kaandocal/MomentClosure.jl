@@ -198,7 +198,7 @@ function get_moments_FSP(sol::ODESolution, order::Int, moment_type::String)
     N = length(state_space)
     no_t_pts = length(sol.u)
 
-    iter_moments = MomentClosure.construct_iter_all(N, order)[2:end]
+    iter_moments = construct_iter_all(N, order)[2:end]
     moments = Dict([iter => Array{Float64}(undef, no_t_pts) for iter in iter_moments])
 
     iter_state = Iterators.product((0:i-1 for i in state_space)...)
@@ -211,8 +211,8 @@ function get_moments_FSP(sol::ODESolution, order::Int, moment_type::String)
             end
         end
     else
-        μ = Dict{Tuple{fill(Int, N)...}, Float64}()
-        μ[Tuple(fill(0, N))] = 1.
+        μ = Dict{NTuple{N,Int}, Float64}()
+        μ[Tuple(zeros(Int, N))] = 1.
 
         for t_pt in 1:no_t_pts
             tslice = sol[t_pt]
@@ -254,16 +254,8 @@ return a mapping of each moment to its initial value under deterministic initial
   molecule numbers of certain species to *zeros* will result in NaN errors when solving
   the ODEs (the specifics depend on the system at hand).
 """
-function deterministic_IC(u₀::Array{T, 1}, eqs::MomentEquations) where T<:Real
-
-    if eqs isa ClosedMomentEquations
-        sys = eqs.open_eqs
-    else
-        sys = eqs
-    end
-
-    odes = eqs.odes
-    N = sys.N
+function deterministic_IC(u₀::AbstractVector, sys::MomentEquations{N},
+                          odes = sys.odes) where {N}
     if N != length(u₀)
         error("length of the passed IC vector and the number of species in the system are inconsistent")
     end
@@ -271,7 +263,7 @@ function deterministic_IC(u₀::Array{T, 1}, eqs::MomentEquations) where T<:Real
     μ_map = [sys.μ[iter] => u₀[i] for (i, iter) in enumerate(get_iter_1(sys))]
 
     no_states = length(odes.states)
-    if typeof(sys) == CentralMomentEquations
+    if sys isa CentralMomentEquations
         moment_map = [odes.states[i] => 0.0 for i in N+1:no_states]
     else
         reverse_μ = Dict(μ => iter for (iter, μ) in sys.μ)
@@ -279,9 +271,11 @@ function deterministic_IC(u₀::Array{T, 1}, eqs::MomentEquations) where T<:Real
     end
 
     vcat(μ_map, moment_map)
-
 end
 
+function deterministic_IC(u₀::AbstractVector, sys::ClosedMomentEquations) 
+    deterministic_IC(u₀, sys.open_eqs, sys.odes)
+end
 
 """
     format_moment_eqs(eqs::MomentEquations)

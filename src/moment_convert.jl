@@ -50,14 +50,14 @@ function cumulants_to_raw_moments(N::Int, max_order::Int,
             factor = prod(binomial.(iter_sub, i))
             suma += factor*μ[iter.-i]*μ_star[i]
         end
-        K[r] = mc_simplify(suma)
+        K[iter] = mc_simplify(suma)
 
         suma = 0
         for i in iter_i
             factor = prod(binomial.(iter_sub,i))
             suma += factor*(-K[iter.-i])*μ_star[i]
         end
-        μ_star[r] = mc_simplify(suma)
+        μ_star[iter] = mc_simplify(suma)
     end
 
     K
@@ -82,7 +82,7 @@ function cumulants_to_central_moments(N::Int, max_order::Int,
     K = Dict{NTuple{N,Int},Any}()
     M_star = Dict{NTuple{N,Int},Any}()
 
-    iter_1 = get_iter_1(iter_all)
+    iter_1 = get_iter_1(iter_all, N)
 
     M_star[Tuple(zeros(N))] = 1.0
     for i in 1:N
@@ -104,7 +104,7 @@ function cumulants_to_central_moments(N::Int, max_order::Int,
             factor = prod(binomial.(iter_sub, i))
             suma += factor*M[iter.-i]*M_star[i]
         end
-        K[r] = mc_simplify(suma)
+        K[iter] = mc_simplify(suma)
 
         # Find the central moment \M^*_{\bm{r}}
         suma = 0.0
@@ -113,7 +113,7 @@ function cumulants_to_central_moments(N::Int, max_order::Int,
             suma += factor*(-K[iter.-i])*M_star[i]
         end
         suma -= -μ[iter_1[ind]]*M_star[iter_sub]
-        M_star[r] = mc_simplify(suma)
+        M_star[iter] = mc_simplify(suma)
 
     end
 

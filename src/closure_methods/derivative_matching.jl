@@ -1,4 +1,4 @@
-multi_binomial(a, b) = prod(binomial, a, b)
+multi_binomial(a, b) = prod(binomial.(a, b))
 
 function derivative_matching(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}=Int[]) where {N}
     closure_exp = OrderedDict()
@@ -12,14 +12,14 @@ function derivative_matching(sys::MomentEquations{N}, binary_vars::AbstractVecto
     end
 
     # construct the raw moments up to mth order from the solved-for central moments
-    if typeof(sys) == CentralMomentEquations
+    if sys isa CentralMomentEquations
         closed_μ = central_to_raw_moments(N, sys.m_order)
-        μ = central_to_raw_moments(N, sys.q_order, get_iter_all(sys), sys.μ, sys.M)
+        μ = central_to_raw_moments(N, sys.q_order, get_iter_all(sys))
     else
         μ = sys.μ
         closed_μ = copy(μ)
     end
-    μ_symbolic = define_μ(sys.N, sys.q_order, get_iter_all(sys))
+    μ_symbolic = define_μ(N, sys.q_order)
 
     # note that derivative matching is originally constructed by truncating at order of m_order+1
     # so if q_order > m_order + 1, we have to consider m_order+1, m_order+2, and so on in sequence
@@ -88,7 +88,7 @@ function derivative_matching(sys::MomentEquations{N}, binary_vars::AbstractVecto
 
     end
 
-    if typeof(sys) == CentralMomentEquations
+    if sys isa CentralMomentEquations
         # construct the corresponding truncated expressions of higher order
         # central moments from the obtained raw moment expressions
         raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys),

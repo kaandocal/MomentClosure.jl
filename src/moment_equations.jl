@@ -1,4 +1,4 @@
-abstract type MomentEquations{N} where {N} end
+abstract type MomentEquations{N} end
 
 """
 $(TYPEDEF)
@@ -11,7 +11,7 @@ helper parameters (used internally).
 # Fields
 $(FIELDS)
 """
-struct RawMomentEquations{N} <: MomentEquations{N} where {N}
+struct RawMomentEquations{N} <: MomentEquations{N}
     """[`ModelingToolkit.ODESystem`](https://mtk.sciml.ai/stable/systems/ODESystem/)
     consisting of the time-evolution equations of raw moments."""
     odes::ODESystem
@@ -23,6 +23,14 @@ struct RawMomentEquations{N} <: MomentEquations{N} where {N}
     q_order::Int
     """Vector of all index combinations up to `q_order`."""
     iter_all::Vector{NTuple{N,Int}}
+    iter_m::Vector{NTuple{N,Int}}
+    iter_q::Vector{NTuple{N,Int}}
+end
+
+function RawMomentEquations{N}(odes, μ, m_order, q_order, iter_all) where {N}
+    RawMomentEquations{N}(odes, μ, m_order, q_order, iter_all, 
+                          get_iter_m(iter_all, N, m_order), 
+                          get_iter_q(iter_all, N, m_order, q_order))
 end
 
 """
@@ -34,7 +42,7 @@ helper parameters (used internally).
 # Fields
 $(FIELDS)
 """
-struct CentralMomentEquations{N} <: MomentEquations{N} where {N}
+struct CentralMomentEquations{N} <: MomentEquations{N}
     """[`ModelingToolkit.ODESystem`](https://mtk.sciml.ai/stable/systems/ODESystem/)
     consisting of the time-evolution equations of central moments."""
     odes::ODESystem
@@ -52,6 +60,12 @@ struct CentralMomentEquations{N} <: MomentEquations{N} where {N}
     iter_q::Vector{NTuple{N,Int}}
 end
 
+function CentralMomentEquations{N}(odes, μ, M, m_order, q_order, iter_all) where {N}
+    CentralMomentEquations{N}(odes, μ, M, m_order, q_order, iter_all, 
+                              get_iter_m(iter_all, N, m_order), 
+                              get_iter_q(iter_all, N, m_order, q_order))
+end
+
 """
 $(TYPEDEF)
 
@@ -60,7 +74,7 @@ Closed moment equations and the corresponding closure functions.
 # Fields
 $(FIELDS)
 """
-struct ClosedMomentEquations{MET <: MomentEquations{N}} <: MomentEquations{N} where {N}
+struct ClosedMomentEquations{N,MET <: MomentEquations{N}} <: MomentEquations{N}
     """[`ModelingToolkit.ODESystem`](https://mtk.sciml.ai/stable/systems/ODESystem/)
     consisting of the time-evolution equations of *closed* moments."""
     odes::ODESystem
@@ -75,7 +89,7 @@ function SciMLBase.ODEProblem(eqs::MomentEquations, args...; kwargs...)
     ODEProblem(eqs.odes, args...; kwargs...)
 end
 
-function Base.nameof(eqs::MomentEqutions)
+function Base.nameof(eqs::MomentEquations)
     nameof(eqs.odes)
 end
 
@@ -87,19 +101,18 @@ function get_iter_1(eqs::Union{RawMomentEquations{N},CentralMomentEquations{N}})
 end
 
 # Iterate through all monomials of degree 1 < deg <= m
-function get_iter_m(eqs::Union{RawMomentEquations{N},CentralMomentEquations{N}}) where {N} 
-    get_iter_m(get_iter_all(eqs), N, eqs.m_order)
+function get_iter_m(eqs::Union{RawMomentEquations,CentralMomentEquations}) 
+    eqs.iter_m
 end
 
 # Iterate through all monomials of degree m < deg <= q
-function get_iter_q(eqs::Union{RawMomentEquations{N},CentralMomentEquations{N}}) where {N} 
-    get_iter_q(get_iter_all(eqs), N, eqs.m_order, eqs.q_order)
+function get_iter_q(eqs::Union{RawMomentEquations,CentralMomentEquations})
+    eqs.iter_q
 end
 
-function get_iter_M(eqs::Union{RawMomentEquations{N},CentralMomentEquations{N}}) where {N} 
-    get_iter_M(get_iter_all(eqs), N)
+function get_iter_M(eqs::Union{RawMomentEquations,CentralMomentEquations})
+    vcat(get_iter_m(eqs), get_iter_q(eqs))
 end
-
 
 get_iter_1(iter_all, N) = @view iter_all[2:N+1]
 get_iter_m(iter_all, N, m) = @view iter_all[N+2:sum(d->binomial(N-1+d,N-1), 0:m)]
@@ -111,4 +124,3 @@ get_iter_1(eqs::ClosedMomentEquations) = get_iter_1(eqs.open_eqs)
 get_iter_m(eqs::ClosedMomentEquations) = get_iter_m(eqs.open_eqs)
 get_iter_q(eqs::ClosedMomentEquations) = get_iter_q(eqs.open_eqs)
 get_iter_M(eqs::ClosedMomentEquations) = get_iter_M(eqs.open_eqs)
-

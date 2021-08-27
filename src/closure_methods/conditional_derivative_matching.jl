@@ -1,10 +1,9 @@
-function conditional_derivative_matching(sys::MomentEquations,
-                                         binary_vars::Array{Int,1}=Int[])
+function conditional_derivative_matching(sys::MomentEquations{N},
+                                         binary_vars::AbstractVector{Int}=Int[]) where {N}
 
     if isempty(binary_vars)
         error("conditional closure does not work if there are no binary species")
     end
-    N = sys.N
     sys = bernoulli_moment_eqs(sys, binary_vars)
 
     # define symbolic raw moment expressions
@@ -23,7 +22,7 @@ function conditional_derivative_matching(sys::MomentEquations,
     nonbernoulli_iters = filter(x -> sum(x[binary_vars]) == 0, get_iter_all(sys))
 
     # iterator through all moments of lower order
-    iter_qs = chain(get_iter_1(sys), get_iter_m(sys))
+    iter_qs = vcat(get_iter_1(sys), get_iter_m(sys))
     sub = Dict()
 
     for order in sys.m_order+1:sys.q_order
@@ -128,7 +127,7 @@ function conditional_derivative_matching(sys::MomentEquations,
 
         end
 
-        iter_qs = chain(iter_qs, iter_order)
+        iter_qs = vcat(iter_qs, iter_order)
 
     end
 

@@ -7,12 +7,12 @@ function normal_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int
     end
 
     # build symbolic expressions of cumulants up to q_order in terms of central/raw moments
-    if typeof(sys) == CentralMomentEquations
+    if sys isa CentralMomentEquations
         moments = sys.M
-        K = cumulants_to_central_moments(N, sys.q_order, get_iter_all(sys), sys.μ, sys.M)
+        K = cumulants_to_central_moments(N, sys.q_order)
     else
         moments = sys.μ
-        K = cumulants_to_raw_moments(N, sys.q_order, get_iter_all(sys), sys.μ)
+        K = cumulants_to_raw_moments(N, sys.q_order)
     end
 
     #unique_iter_q = unique(sort(i) for i in sys.iter_q)

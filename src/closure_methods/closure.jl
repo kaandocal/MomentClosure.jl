@@ -1,5 +1,5 @@
-function close_eqs(sys::MomentEquations, closure_exp::OrderedDict,
-                   closure::OrderedDict, polynorm::Bool)
+function close_eqs(sys::MomentEquations{N}, closure_exp::OrderedDict,
+                   closure::OrderedDict, polynorm::Bool) where {N}
 
     # TODO: improve performance
 
