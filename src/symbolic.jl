@@ -6,7 +6,6 @@ struct VariableSource end
 using Combinatorics
 
 function construct_iter_all(N::Int, order::Int)
-
     #Construct an ordered iterator going over all moments
     # sequentially in terms of order
 
@@ -75,12 +74,14 @@ function define_M(N::Int, order::Int, iter=construct_iter_all(N, order))
 end
 
 
-function extract_variables(eqs::Array{Equation, 1}, N::Int, q_order::Int)
-    iters = construct_iter_all(N, q_order)
-    iter_μ = filter(x -> sum(x) > 0, iters)
-    iter_M = filter(x -> sum(x) > 1, iters)
+function extract_variables(eqs::Array{Equation, 1}, N::Int, q_order::Int,
+                           iter_all = construct_iter_all(N, q_order))
+    #iter_μ = filter(x -> sum(x) > 0, iters)
+    iter_M = get_iter_M(iter_all, N)
 
-    μs = values(define_μ(N, q_order, iter_μ))
+    #### REPLACE BY iter_μ?
+    
+    μs = values(define_μ(N, q_order, iter_all))
     Ms = values(define_M(N, q_order, iter_M))
     vars = vcat(μs..., Ms...)
     # extract variables from rhs of each equation
@@ -91,8 +92,7 @@ function extract_variables(eqs::Array{Equation, 1}, N::Int, q_order::Int)
     eq_vars = unique(vcat(eq_vars..., diff_vars...))
     # this should preserve the correct ordering
 
-    vars = intersect!(vars, eq_vars)
-    vars
+    intersect(vars, eq_vars)
 end
 
 ## Set of functions to deconstruct polynomial propensities ##

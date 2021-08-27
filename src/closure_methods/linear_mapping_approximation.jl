@@ -26,7 +26,8 @@ Notes:
 -  [`ReactionSystemMod`](@ref) is currently unsupported as by design it does not contain information of reaction
   substrates and hence requires an API change. To be updated in the future!
 """
-function linear_mapping_approximation(rn_nonlinear::T, rn_linear::T, binary_vars::Array{Int,1}=Int[], m_order::Int=0;
+function linear_mapping_approximation(rn_nonlinear::T, rn_linear::T, 
+                                      binary_vars::AbstractVector{Int}=Int[], m_order::Int=0;
                                       combinatoric_ratelaw = true) where T <: ReactionSystem
 
       # check that all necessary information is provided and that LMA is applicable on the given nonlinear system
@@ -60,9 +61,10 @@ function linear_mapping_approximation(rn_nonlinear::T, rn_linear::T, binary_vars
       which_binary = [binary_vars[findfirst(submat[i, binary_vars] .> 0)] for i in nonlinear_rs_inds]
       sub_params = OrderedDict()
       μ = sys.μ
+      iter_1 = get_iter_1(sys)
       for (coeff, factors, powers, binary_ind) in zip(coeffs, term_factors, term_powers, which_binary)
             sub_params[coeff] = sum(factor*μ[Tuple(power)] for (factor, power) in zip(factors, powers))
-            sub_params[coeff] /= μ[sys.iter_1[binary_ind]]
+            sub_params[coeff] /= μ[iter_1[binary_ind]]
             sub_params[coeff] = mc_simplify(sub_params[coeff])
       end
 

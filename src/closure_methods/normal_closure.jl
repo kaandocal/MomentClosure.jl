@@ -1,8 +1,6 @@
-function normal_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
-
+function normal_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}=Int[]) where {N}
     closure = OrderedDict()
     closure_exp = OrderedDict()
-    N = sys.N
 
     if !isempty(binary_vars)
         sys = bernoulli_moment_eqs(sys, binary_vars)
@@ -11,20 +9,21 @@ function normal_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
     # build symbolic expressions of cumulants up to q_order in terms of central/raw moments
     if typeof(sys) == CentralMomentEquations
         moments = sys.M
-        K = cumulants_to_central_moments(N, sys.q_order)
+        K = cumulants_to_central_moments(N, sys.q_order, get_iter_all(sys), sys.μ, sys.M)
     else
         moments = sys.μ
-        K = cumulants_to_raw_moments(N, sys.q_order)
+        K = cumulants_to_raw_moments(N, sys.q_order, get_iter_all(sys), sys.μ)
     end
 
     #unique_iter_q = unique(sort(i) for i in sys.iter_q)
-    iter_qs = sys.iter_m
+    iter_qs = get_iter_m(sys)
     sub = Dict()
+    iter_1 = get_iter_1(sys)
 
     # construct the corresponding truncated expressions of higher order central moments
     for order in sys.m_order+1:sys.q_order
 
-        iter_r = filter(x -> sum(x) == order, sys.iter_q)
+        iter_r = filter(x -> sum(x) == order, get_iter_q(sys))
 
         for r in unique(sort(i) for i in iter_r)
             # the last term in the symbolic expression of cumulant κᵣ is Mᵣ (μᵣ)
@@ -41,7 +40,7 @@ function normal_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
             for iter_perm in perms
 
                 iter_perm_ind = sortperm(sortperm(iter_perm))
-                for i in sys.iter_1
+                for i in iter_1
                     sub[sys.μ[i]] = sys.μ[i[iter_perm_ind]]
                 end
                 for i in iter_qs

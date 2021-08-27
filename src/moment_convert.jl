@@ -23,7 +23,7 @@ function cumulants_to_raw_moments(N::Int, max_order::Int,
                                   iter_all=construct_iter_all(N, max_order),
                                   μ=define_μ(N, max_order, iter_all))
     # following Smith (1995)
-    iter_1 = filter(x -> sum(x) == 1, iter_all)
+    iter_1 = get_iter_1(iter_all, N)
 
     @assert length(μ) == length(iter_all) "passed arguments are inconsistent (μ vs N & order)"
 
@@ -37,30 +37,27 @@ function cumulants_to_raw_moments(N::Int, max_order::Int,
         μ_star[eᵢ] = -μ[eᵢ]
     end
 
-    for order in 2:max_order
+    for iter in get_iter_M(iter_all, N)
+        order = sum(iter)
+        @assert order <= max_order
 
-        iter_order = filter(x -> sum(x) == order, iter_all)
-        for r in iter_order
+        ind = findlast(!iszero, iter)
+        iter_sub = iter .- iter_1[ind]
+        iter_i = filter(x -> all(x .<= iter_sub), iter_all)
 
-            ind = findlast(!iszero, r)
-            r_sub = r .- iter_1[ind]
-            iter_i = filter(x -> all(x .<= r_sub), iter_all)
-
-            suma = 0
-            for i in iter_i
-                factor = prod(binomial.(r_sub, i))
-                suma += factor*μ[r.-i]*μ_star[i]
-            end
-            K[r] = mc_simplify(suma)
-
-            suma = 0
-            for i in iter_i
-                factor = prod(binomial.(r_sub,i))
-                suma += factor*(-K[r.-i])*μ_star[i]
-            end
-            μ_star[r] = mc_simplify(suma)
+        suma = 0
+        for i in iter_i
+            factor = prod(binomial.(iter_sub, i))
+            suma += factor*μ[iter.-i]*μ_star[i]
         end
+        K[r] = mc_simplify(suma)
 
+        suma = 0
+        for i in iter_i
+            factor = prod(binomial.(iter_sub,i))
+            suma += factor*(-K[iter.-i])*μ_star[i]
+        end
+        μ_star[r] = mc_simplify(suma)
     end
 
     K
@@ -76,7 +73,7 @@ to the corresponding central moment expressions.
 """
 function cumulants_to_central_moments(N::Int, max_order::Int,
                                       iter_all=construct_iter_all(N, max_order),
-                                      μ=define_μ(N, 1),
+                                      μ=define_μ(N, 1, get_iter_1(iter_all, N)),
                                       M=define_M(N, max_order, iter_all))
 
     # obtain cumulants up to (m_order)^th order in terms of
@@ -85,7 +82,7 @@ function cumulants_to_central_moments(N::Int, max_order::Int,
     K = Dict{NTuple{N,Int},Any}()
     M_star = Dict{NTuple{N,Int},Any}()
 
-    iter_1 = filter(x -> sum(x) == 1, iter_all)
+    iter_1 = get_iter_1(iter_all)
 
     M_star[Tuple(zeros(N))] = 1.0
     for i in 1:N
@@ -94,33 +91,29 @@ function cumulants_to_central_moments(N::Int, max_order::Int,
         M_star[eᵢ] = 0.0
     end
 
-    for order in 2:max_order
-        # going up through the orders iteratively to build up the expressions (could do recursively?)
+    for iter in get_iter_M(iter_all, N)
+        order = sum(iter)
+        @assert order <= max_order
 
-        iter_order = filter(x -> sum(x) == order, iter_all)
-        for r in iter_order
-
-            ind = findlast(!iszero, r)
-            r_sub = r .- iter_1[ind]
-            iter_i = filter(x -> all(x .<= r_sub), iter_all)
-            # find the cumulant \kappa_{\bm{r}}}
-            suma = 0.0
-            for i in iter_i
-                factor = prod(binomial.(r_sub, i))
-                suma += factor*M[r.-i]*M_star[i]
-            end
-            K[r] = mc_simplify(suma)
-
-            # Find the central moment \M^*_{\bm{r}}
-            suma = 0.0
-            for i in iter_i
-                factor = prod(binomial.(r_sub, i))
-                suma += factor*(-K[r.-i])*M_star[i]
-            end
-            suma -= -μ[iter_1[ind]]*M_star[r_sub]
-            M_star[r] = mc_simplify(suma)
-
+        ind = findlast(!iszero, iter)
+        iter_sub = iter .- iter_1[ind]
+        iter_i = filter(x -> all(x .<= iter_sub), iter_all)
+        # find the cumulant \kappa_{\bm{r}}}
+        suma = 0.0
+        for i in iter_i
+            factor = prod(binomial.(iter_sub, i))
+            suma += factor*M[iter.-i]*M_star[i]
         end
+        K[r] = mc_simplify(suma)
+
+        # Find the central moment \M^*_{\bm{r}}
+        suma = 0.0
+        for i in iter_i
+            factor = prod(binomial.(iter_sub, i))
+            suma += factor*(-K[iter.-i])*M_star[i]
+        end
+        suma -= -μ[iter_1[ind]]*M_star[iter_sub]
+        M_star[r] = mc_simplify(suma)
 
     end
 
@@ -140,7 +133,7 @@ function raw_to_central_moments(N::Int, order::Int,
     # note that μ is an optional argument which can be used to pass
     # arbitrary values/symbols for each raw moment (different from default μᵢ)
 
-    iter_μ = filter(x -> sum(x) == 1, iter_all)
+    iter_1 = get_iter_1(iter_all, N)
     if !(μ isa AbstractDict) || length(μ) != length(iter_all)
         if bernoulli
             iter_all = keys(μ)
@@ -151,12 +144,11 @@ function raw_to_central_moments(N::Int, order::Int,
     raw_to_central = Dict{NTuple{N,Int},Any}()
 
     for i in iter_all
-
         iter_j = Iterators.filter(x -> all(x .<= i), iter_all)
         suma = 0.0
         for j in iter_j
             term = μ[i.-j]
-            for (k, e_k) in zip(1:N, iter_μ)
+            for (k, e_k) in enumerate(iter_1)
                 term *= (-1)^(j[k])*binomial(i[k], j[k])*μ[e_k]^j[k]
             end
             suma += term
@@ -172,23 +164,21 @@ function central_to_raw_moments(N::Int, order::Int,
                                 iter_all=construct_iter_all(N, order),
                                 μ=define_μ(N, order, iter_all),
                                 M=define_M(N, order, iter_all))
-
     # Return a dictionary of raw moments expressed in terms of central moments
     # example use:
     # 1 central_to_raw = central_to_raw_moments(2, 3)
     # 2 μ₁₂ = central_to_raw[(1,2)] = 2 M₁₁ μ₀₁ + M₀₂μ₁₀ + M₁₂ + μ₁₀ μ₀₁²
 
-    iter_μ = filter(x -> sum(x) == 1, iter_all)
+    iter_1 = get_iter_1(iter_all, N)
 
     central_to_raw = Dict{NTuple{N,Int},Any}()
 
     for i in iter_all
-
         iter_j = Iterators.filter(x -> all(x .<= i), iter_all)
         suma = 0.0
         for j in iter_j
             term = M[i.-j]
-            for (k, e_k) in zip(1:N, iter_μ)
+            for (k, e_k) in enumerate(iter_1)
                 term *= binomial(i[k], j[k])*μ[e_k]^j[k]
             end
             suma += term

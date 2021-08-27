@@ -22,12 +22,10 @@ function gamma_factorial(a, i)
 end
 
 
-function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
-
+function gamma_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}=Int[]) where {N}
     closure = OrderedDict() # leaving symbolic higher order terms
     closure_exp = OrderedDict() # expanding out all higher order terms fully
 
-    N = sys.N
     if sys isa CentralMomentEquations
         M = copy(sys.M)
         μ = central_to_raw_moments(N, sys.m_order)
@@ -74,10 +72,11 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
 
     symbolic_sub = Dict()
     β = Array{Any}(undef, N)
+    iter_1 = get_iter_1(sys)
     for i in 1:N
-        eᵢ = sys.iter_1[i]
+        eᵢ = iter_1[i]
         for j in i+1:N
-            eⱼ = sys.iter_1[j]
+            eⱼ = iter_1[j]
             symbolic_sub[αs[i, j]] = M[eᵢ .+ eⱼ] * μ[eᵢ] * μ[eⱼ] / M[2 .* eᵢ] / M[2 .* eⱼ]
         end
         symbolic_sub[x[i]] = μ[eᵢ]^2 / M[2 .* eᵢ]
@@ -88,10 +87,10 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
     iters = Vector(undef, N)
 
     # TupleTools.sort comes in handy here
-    unique_iter_q = unique(sort(i) for i in sys.iter_q)
+    unique_iter_q = unique(sort(i) for i in get_iter_q(sys))
     sub = Dict()
 
-    iter_2nd_order = filter(x-> sum(x) == 2, sys.iter_m)
+    iter_2nd_order = filter(x-> sum(x) == 2, get_iter_m(sys))
     # line below reproduces Lakatos et al. (2015) results - stronger assumptions
     #unique_iter_q = unique(sort(i) for i in vcat(sys.iter_m, sys.iter_q))
 
@@ -99,7 +98,7 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
 
         # construct iterator through the product of sums in the Eq. for raw moments
         for j in 1:N
-            iter_j = Iterators.filter(x -> sum(x)==iter[j], sys.iter_all)
+            iter_j = Iterators.filter(x -> sum(x)==iter[j], get_iter_all(sys))
             iters[j] = iter_j
         end
 
@@ -138,7 +137,7 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
         for iter_perm in perms
 
             iter_perm_ind = sortperm(sortperm(iter_perm))
-            for i in sys.iter_1
+            for i in iter_1
                 sub[μ_symbolic[i]] = μ_symbolic[i[iter_perm_ind]]
             end
             for i in iter_2nd_order
@@ -155,17 +154,17 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
     # construct the corresponding truncated expressions of higher order
     # central moments from the obtained gamma raw moment expressions
     if sys isa CentralMomentEquations
-        raw_to_central = raw_to_central_moments(N, sys.q_order, sys.iter_all, μ)
-        central_to_raw = central_to_raw_moments(N, sys.q_order)
+        raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys), μ, sys.M)
+        central_to_raw = central_to_raw_moments(N, sys.q_order, get_iter_all(sys), sys.μ, sys.M)
         closure_M = OrderedDict()
-        for i in sys.iter_q
+        for i in get_iter_q(sys)
             closure_exp[M[i]] = raw_to_central[i]
             closure_M[M[i]] = mc_simplify(closure[μ_symbolic[i]]-(central_to_raw[i]-M[i]))
         end
         closure = closure_M
     else
         raw_to_central = raw_to_central_moments(N, 2)
-        M_to_μ = [M[i] => raw_to_central[i] for i in filter(x -> sum(x)==2, sys.iter_all)]
+        M_to_μ = [M[i] => raw_to_central[i] for i in filter(x -> sum(x)==2, get_iter_all(sys))]
 
         # variance of bernoulli variable is expressed in terms of its mean
         #for ind in binary_vars
@@ -173,7 +172,7 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
     #        push!(M_to_μ, M[2 .* eᵢ] => μ[eᵢ] - μ[eᵢ]^2)
     #    end
 
-        for i in sys.iter_q
+    for i in get_iter_q(sys)
             closure_exp[sys.μ[i]] = substitute(μ[i], M_to_μ)
             expr = substitute(closure[sys.μ[i]], M_to_μ)
             closure[sys.μ[i]] = mc_simplify(expr)
@@ -202,7 +201,7 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
             end
         end
 
-        iter_rm = intersect(sys.iter_q, redundant_iter)
+        iter_rm = intersect(get_iter_q(sys), redundant_iter)
 
         if sys isa CentralMomentEquations
             moments = M

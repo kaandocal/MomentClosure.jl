@@ -1,8 +1,6 @@
-function poisson_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
-
+function poisson_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}=Int[]) where {N}
     closure = OrderedDict()
     closure_exp = OrderedDict()
-    N = sys.N
 
     if !isempty(binary_vars)
         sys = bernoulli_moment_eqs(sys, binary_vars)
@@ -11,19 +9,20 @@ function poisson_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
     # build symbolic expressions of cumulants up to q_order in terms of central/raw moments
     if typeof(sys) == CentralMomentEquations
         moments = copy(sys.M)
-        K = cumulants_to_central_moments(N, sys.q_order)
+        K = cumulants_to_central_moments(N, sys.q_order, get_iter_all(sys), sys.μ, sys.M)
     else
         moments = copy(sys.μ)
-        K = cumulants_to_raw_moments(N, sys.q_order)
+        K = cumulants_to_raw_moments(N, sys.q_order, get_iter_all(sys), sys.μ)
     end
 
-    iter_qs = sys.iter_m
+    iter_qs = get_iter_m(sys)
     sub = Dict()
 
+    iter_1 = get_iter_1(sys)
     # construct the corresponding truncated expressions of higher order central moments
     for order in sys.m_order+1:sys.q_order
 
-        iter_r = filter(x -> sum(x) == order, sys.iter_q)
+        iter_r = filter(x -> sum(x) == order, get_iter_q(sys))
         iter_qs = vcat(iter_qs, iter_r)
 
         for r in unique(sort(i) for i in iter_r)
@@ -33,7 +32,7 @@ function poisson_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
             # poisson closure - set diagonal higher order cumulants to the corresponding
             # mean value and mixed higher order cumulants to zero
             if sum(r) in r #diagonality condition
-                eᵣ = sys.iter_1[findfirst(!iszero, r)]
+                eᵣ = iter_1[findfirst(!iszero, r)]
                 closed_moment = sys.μ[eᵣ]-(K[r]-moments[r])
             else
                 closed_moment = -(K[r]-moments[r])
@@ -49,7 +48,7 @@ function poisson_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
             for iter_perm in perms
 
                 iter_perm_ind = sortperm(sortperm(iter_perm))
-                for i in sys.iter_1
+                for i in iter_1
                     sub[sys.μ[i]] = sys.μ[i[iter_perm_ind]]
                 end
                 for i in iter_qs

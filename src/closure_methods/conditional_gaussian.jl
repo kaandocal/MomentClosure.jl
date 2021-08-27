@@ -1,16 +1,15 @@
-function conditional_gaussian_closure(sys::MomentEquations,
-                                      binary_vars::Array{Int,1}=Int[])
+function conditional_gaussian_closure(sys::MomentEquations{N},
+                                      binary_vars::AbstractVector{Int}=Int[]) where {N}
 
     if isempty(binary_vars)
       error("conditional closure does not work if there are no binary species")
     end
-    N = sys.N
 
     sys = bernoulli_moment_eqs(sys, binary_vars)
     # define symbolic raw moment expressions
-    μ = sys isa CentralMomentEquations ? define_μ(N, sys.q_order) : copy(sys.μ)
+    μ = sys.μ 
     # express cumulants in terms of raw moments
-    K = cumulants_to_raw_moments(N, sys.q_order)
+    K = cumulants_to_raw_moments(N, sys.q_order, get_iter_all(sys), μ)
 
     # closure of higher order raw moments without explicit form of truncated moments
     # e.g. μ₁₄ would still be a function of μ₁₃ even though μ₁₃ is also truncated
@@ -22,16 +21,16 @@ function conditional_gaussian_closure(sys::MomentEquations,
     # perform conditional gaussian closure on raw moments μ
 
     # by nonbernoulli we denote moments which cannot be written in the conditional form
-    nonbernoulli_iters = filter(x -> sum(x[binary_vars]) == 0, sys.iter_all)
+    nonbernoulli_iters = filter(x -> sum(x[binary_vars]) == 0, get_iter_all(sys))
 
     # iterator for symmetric permutations of the indices
-    iter_qs = vcat(sys.iter_1, sys.iter_m)
+    iter_qs = vcat(get_iter_1(sys), get_iter_m(sys))
     sub = Dict()
 
     for order in sys.m_order+1:sys.q_order
 
         # building the closed moment expressions order by order (due to such hierarchical functional dependency)
-        iter_order = filter(x -> sum(x) == order, sys.iter_q)
+        iter_order = filter(x -> sum(x) == order, get_iter_q(sys))
 
         for iter in unique(sort(i) for i in iter_order)
 
@@ -105,23 +104,22 @@ function conditional_gaussian_closure(sys::MomentEquations,
         end
 
         iter_qs = vcat(iter_qs, iter_order)
-
     end
 
     if sys isa CentralMomentEquations
 
         central_to_raw = central_to_raw_moments(N, sys.q_order)
         μ_central = Dict()
-        for iter in vcat(sys.iter_m, sys.iter_q)
+        for iter in get_iter_M(sys)
             μ_central[μ[iter]] = central_to_raw[iter]
         end
 
         μ_M_exp = define_μ(N, 1)
-        for i in sys.iter_m
+        for i in get_iter_m(sys)
             μ_M_exp[i] = μ_central[μ[i]]
         end
         μ_M = copy(μ_M_exp)
-        for i in sys.iter_q
+        for i in get_iter_q(sys)
             μ_M[i] = closure_μ[μ[i]]
             μ_M[i] = substitute(μ_M[i], μ_central)
             μ_M[i] = mc_simplify(μ_M[i], expand=true)
@@ -133,10 +131,10 @@ function conditional_gaussian_closure(sys::MomentEquations,
         closure_exp = OrderedDict()
         # construct the corresponding truncated expressions of higher order
         # central moments from the obtained raw moment expressions
-        raw_to_central_exp = raw_to_central_moments(N, sys.q_order, sys.iter_all, μ_M_exp, 
+        raw_to_central_exp = raw_to_central_moments(N, sys.q_order, get_iter_all(sys), μ_M_exp, 
                                                     bernoulli=true)
-        raw_to_central = raw_to_central_moments(N, sys.q_order, sys.iter_all, μ_M, bernoulli=true)
-        for i in sys.iter_q
+        raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys), μ_M, bernoulli=true)
+        for i in get_iter_q(sys)
             closure_exp[sys.M[i]] = mc_simplify(raw_to_central_exp[i], expand=true)
             closure[sys.M[i]] = mc_simplify(raw_to_central[i], expand=true)
         end

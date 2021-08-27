@@ -32,17 +32,15 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
 
     # iterator over all moments from lowest to highest moment order
     iter_all = construct_iter_all(N, q_order)
-    # iterator over raw moments up to order m
-    iter_m = filter(x -> 1 < sum(x) <= m_order, iter_all)
-    # iterator over raw moments of order rgrater than m up to q_order
-    iter_q = filter(x -> m_order < sum(x) <= q_order, iter_all)
     # iterator over the first order moments
-    iter_1 = filter(x -> sum(x) == 1, iter_all)
+    iter_1 = get_iter_1(iter_all, N)
+    # iterator over raw moments up to order m
+    iter_m = get_iter_m(iter_all, N, m_order)
 
-    μ = define_μ(N, q_order)
+    μ = define_μ(N, q_order, iter_all)
 
     dμ = Dict()
-    for i in vcat(iter_1, iter_m)
+    for i in chain(iter_1, iter_m)
         dμ[i] = 0
         for r = 1:numreactions(rn)
             iter_j = filter(x -> all(x .<= i) && sum(x) <= sum(i) - 1, iter_all)
@@ -64,24 +62,20 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
     iv = get_iv(rn)
     D = Differential(iv)
     eqs = Equation[]
-    for i in vcat(iter_1, iter_m)
+    for i in chain(iter_1, iter_m)
         push!(eqs, D(μ[i]) ~ dμ[i])
     end
 
-    vars = extract_variables(eqs, N, q_order)
+    vars = extract_variables(eqs, N, q_order, iter_all)
     odes = ODESystem(eqs, iv, vars, get_ps(rn); 
                      name=Symbol(nameof(rn),"_raw_moment_eqs_",m_order))
 
-    RawMomentEquations(
+    RawMomentEquations{N}(
         odes,
         μ,
-        N,
         m_order,
         q_order,
-        iter_all,
-        iter_m,
-        iter_q,
-        iter_1,
+        iter_all
     )
 
 end

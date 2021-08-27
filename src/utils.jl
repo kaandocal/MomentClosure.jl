@@ -42,8 +42,8 @@ function get_raw_moments(sol::EnsembleSolution, order::Int; naive::Bool=true, b:
     iter_order = [filter(x -> sum(x) == m, iter_all) for m in 1:order]
     iter_μ = vcat(iter_order...)
 
-    keys = Dict([iter => vcat([fill(i, n) for (i,n) in enumerate(iter)]...) for iter in iter_μ])
-    μ = Dict([iter => Array{Float64}(undef, no_t_pts) for iter in iter_μ])
+    keys = Dict(iter => vcat([fill(i, n) for (i,n) in enumerate(iter)]...) for iter in iter_μ)
+    μ = Dict(iter => Array{Float64}(undef, no_t_pts) for iter in iter_μ)
 
     for t_pt in 1:no_t_pts
 
@@ -87,8 +87,8 @@ function get_central_moments(sol::EnsembleSolution, order::Int; naive::Bool=true
     iter_order = [filter(x-> sum(x) == m, iter_all) for m in 1:order]
     iter_M = filter(x -> sum(x) > 1, iter_all)
 
-    keys = Dict([iter => vcat([fill(i, n) for (i,n) in enumerate(iter)]...) for iter in iter_all])
-    M = Dict([iter => Array{Float64}(undef, no_t_pts) for iter in iter_M])
+    keys = Dict(iter => vcat([fill(i, n) for (i,n) in enumerate(iter)]...) for iter in iter_all)
+    M = Dict(iter => Array{Float64}(undef, no_t_pts) for iter in iter_M)
 
     μ = Dict()
     μ[Tuple(fill(0, N))] = 1.
@@ -268,7 +268,7 @@ function deterministic_IC(u₀::Array{T, 1}, eqs::MomentEquations) where T<:Real
         error("length of the passed IC vector and the number of species in the system are inconsistent")
     end
 
-    μ_map = [sys.μ[iter] => u₀[i] for (i, iter) in enumerate(sys.iter_1)]
+    μ_map = [sys.μ[iter] => u₀[i] for (i, iter) in enumerate(get_iter_1(sys))]
 
     no_states = length(odes.states)
     if typeof(sys) == CentralMomentEquations

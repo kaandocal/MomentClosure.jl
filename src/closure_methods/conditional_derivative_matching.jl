@@ -20,16 +20,16 @@ function conditional_derivative_matching(sys::MomentEquations,
     ### perform conditional gaussian closure on raw moments μ ###
 
     # by nonbernoulli we denote moments which cannot be written in the conditional form
-    nonbernoulli_iters = filter(x -> sum(x[binary_vars]) == 0, sys.iter_all)
+    nonbernoulli_iters = filter(x -> sum(x[binary_vars]) == 0, get_iter_all(sys))
 
     # iterator through all moments of lower order
-    iter_qs = vcat(sys.iter_1, sys.iter_m)
+    iter_qs = chain(get_iter_1(sys), get_iter_m(sys))
     sub = Dict()
 
     for order in sys.m_order+1:sys.q_order
 
         # building the closed moment expressions order by order (due to such hierarchical functional dependency)
-        iter_order = filter(x -> sum(x) == order, sys.iter_q)
+        iter_order = filter(x -> sum(x) == order, get_iter_q(sys))
 
         for iter in unique(sort(i) for i in iter_order)
 
@@ -128,7 +128,7 @@ function conditional_derivative_matching(sys::MomentEquations,
 
         end
 
-        iter_qs = vcat(iter_qs, iter_order)
+        iter_qs = chain(iter_qs, iter_order)
 
     end
 
@@ -136,16 +136,16 @@ function conditional_derivative_matching(sys::MomentEquations,
 
         central_to_raw = central_to_raw_moments(N, sys.q_order)
         μ_central = Dict()
-        for iter in vcat(sys.iter_m, sys.iter_q)
+        for iter in get_iter_M(sys)
             μ_central[μ[iter]] = central_to_raw[iter]
         end
 
         μ_M_exp = define_μ(N, 1)
-        for i in sys.iter_m
+        for i in get_iter_m(sys)
             μ_M_exp[i] = μ_central[μ[i]]
         end
         μ_M = copy(μ_M_exp)
-        for i in sys.iter_q
+        for i in get_iter_q(sys)
             μ_M[i] = closure_μ[μ[i]]
             μ_M[i] = substitute(μ_M[i], μ_central)
             μ_M[i] = mc_simplify(μ_M[i])
@@ -159,9 +159,14 @@ function conditional_derivative_matching(sys::MomentEquations,
         # construct the corresponding truncated expressions of higher order
         # central moments from the obtained raw moment expressions
         raw_to_central_exp = raw_to_central_moments(N, sys.q_order, 
-                                                    sys.iter_all, μ_M_exp, bernoulli=true)
-        raw_to_central = raw_to_central_moments(N, sys.q_order, sys.iter_all, μ_M, bernoulli=true)
-        for i in sys.iter_q
+                                                    get_iter_all(sys), 
+                                                    μ_M_exp, 
+                                                    bernoulli=true)
+
+        raw_to_central = raw_to_central_moments(N, sys.q_order, 
+                                                get_iter_all(sys), 
+                                                μ_M, bernoulli=true)
+        for i in get_iter_q(sys)
             closure_exp[sys.M[i]] = mc_simplify(raw_to_central_exp[i])
             closure[sys.M[i]] = mc_simplify(raw_to_central[i])
         end

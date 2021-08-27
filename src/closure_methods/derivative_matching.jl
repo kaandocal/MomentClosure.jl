@@ -1,21 +1,8 @@
-function multi_binomial(a, b)
-    # take two vectors a and b as arguments and calculate
-    # a product of binomials computed from the corresponding vector components
-    # C^a_b = binomial(a₁,b₁) * binomial(a₂,b₂) * ... * binomial(a_n, β_n)
-    if length(a) != length(b)
-        throw(ErrorException("vector lengths are different for some reason"))
-    else
-        C = prod([binomial(a[i], b[i]) for i in 1:length(a)])
-        return C
-    end
-end
+multi_binomial(a, b) = prod(binomial, a, b)
 
-function derivative_matching(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
-
+function derivative_matching(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}=Int[]) where {N}
     closure_exp = OrderedDict()
     closure = OrderedDict() # additional dict to hold not expanded symbolic expressions
-
-    N = sys.N
 
     if isempty(binary_vars)
         isbernoulli = false
@@ -27,19 +14,19 @@ function derivative_matching(sys::MomentEquations, binary_vars::Array{Int,1}=Int
     # construct the raw moments up to mth order from the solved-for central moments
     if typeof(sys) == CentralMomentEquations
         closed_μ = central_to_raw_moments(N, sys.m_order)
-        μ = central_to_raw_moments(N, sys.q_order)
+        μ = central_to_raw_moments(N, sys.q_order, get_iter_all(sys), sys.μ, sys.M)
     else
         μ = sys.μ
         closed_μ = copy(μ)
     end
-    μ_symbolic = define_μ(sys.N, sys.q_order)
+    μ_symbolic = define_μ(sys.N, sys.q_order, get_iter_all(sys))
 
     # note that derivative matching is originally constructed by truncating at order of m_order+1
     # so if q_order > m_order + 1, we have to consider m_order+1, m_order+2, and so on in sequence
     # to build up the truncated raw moment expressions
 
     # iterator through all moments of lower order
-    iter_k = vcat(sys.iter_1, sys.iter_m)
+    iter_k = vcat(get_iter_1(sys), get_iter_m(sys))
     sub = Dict()
 
     for order in sys.m_order+1:sys.q_order
@@ -47,7 +34,7 @@ function derivative_matching(sys::MomentEquations, binary_vars::Array{Int,1}=Int
         length_k = length(iter_k)
 
         # iterator through all moments of the current truncation order
-        iter_order = filter(x -> sum(x) == order, sys.iter_q)
+        iter_order = filter(x -> sum(x) == order, get_iter_q(sys))
 
         # initialise matrix needed for linear system defined below
         A = Matrix{Float64}(undef, length_k, length_k)
@@ -104,22 +91,22 @@ function derivative_matching(sys::MomentEquations, binary_vars::Array{Int,1}=Int
     if typeof(sys) == CentralMomentEquations
         # construct the corresponding truncated expressions of higher order
         # central moments from the obtained raw moment expressions
-        raw_to_central = raw_to_central_moments(N, sys.q_order, sys.iter_all, 
+        raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys),
                                                 closed_μ, bernoulli=isbernoulli)
-        central_to_raw = central_to_raw_moments(N, sys.q_order)
+        central_to_raw = central_to_raw_moments(N, sys.q_order, get_iter_all(sys),
+                                                sys.μ, sys.M)
         closure_M = OrderedDict()
-        for i in sys.iter_q
+        for i in get_iter_q(sys)
             closure_exp[sys.M[i]] = raw_to_central[i]
             expr = mc_simplify(central_to_raw[i]-sys.M[i])
             closure_M[sys.M[i]] = mc_simplify(closure[μ_symbolic[i]]-expr)
         end
         closure = closure_M
     else
-        for i in sys.iter_q
+        for i in get_iter_q(sys)
             closure_exp[sys.μ[i]] = closed_μ[i]
         end
     end
 
     close_eqs(sys, closure_exp, closure, false)
-
 end

@@ -1,5 +1,4 @@
-function zero_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
-
+function zero_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}=Int[]) where {N}
     closure = OrderedDict()
     closure_exp = OrderedDict()
 
@@ -8,16 +7,16 @@ function zero_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
     end
 
     if typeof(sys) == CentralMomentEquations
-        for i in sys.iter_q
+        for i in get_iter_q(sys)
             closure[sys.M[i]] = 0
             closure_exp[sys.M[i]] = 0
         end
     else
         μ = copy(sys.μ)
         μ_symbolic = copy(sys.μ)
-        raw_to_central = raw_to_central_moments(sys.N, sys.q_order)
+        raw_to_central = raw_to_central_moments(sys.N, sys.q_order, get_iter_all(sys), sys.μ)
 
-        unique_iter_q = unique(sort(i) for i in sys.iter_q)
+        unique_iter_q = unique(sort(i) for i in get_iter_q(sys))
         sub = Dict()
 
         for i in unique_iter_q
@@ -31,7 +30,7 @@ function zero_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
             for iter_perm in perms
 
                 iter_perm_ind = sortperm(sortperm(iter_perm))
-                for r in sys.iter_all
+                for r in get_iter_all(sys)
                     sub[sys.μ[r]] = sys.μ[r[iter_perm_ind]]
                 end
 
@@ -44,5 +43,4 @@ function zero_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
     end
 
     close_eqs(sys, closure_exp, closure, true)
-
 end

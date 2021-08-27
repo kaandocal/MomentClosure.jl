@@ -1,19 +1,7 @@
 #= An assembly of functions enabling the generation of moment
    equations for any chemical reaction network with any type of
    (infinitely differentiable) propensities up to arbitrary order =#
-
-function fact(i)
-
-    #= Calculate a multi-variate factorial of moment vector i,
-       i.e., if i=(a, b, c), then fact(i) = a!b!c! =#
-
-    fact = 1
-    for j in i
-        fact *= factorial(j)
-    end
-    return fact
-
-end
+fact(i) = prod(factorial, i)
 
 """
     generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod}, m_order::Int, q_order=nothing;
@@ -61,15 +49,13 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
 
     # net stoichiometric matrix
     S = get_S_mat(rn; smap)
-
+    
     # iterator over all moments from lowest to highest moment order
     iter_all = construct_iter_all(N, q_order)
-    # iterator over central moments up to order m
-    iter_m = filter(x -> 1 < sum(x) <= m_order, iter_all)
-    # iterator over central moments of order greater than m up to q_order
-    iter_q = filter(x -> m_order < sum(x) <= q_order, iter_all)
-    # iterator over the first order central moments
-    iter_1 = filter(x -> sum(x) == 1, iter_all)
+    # iterator over the first order moments
+    iter_1 = get_iter_1(iter_all, N)
+    # iterator over raw moments up to order m
+    iter_m = get_iter_m(iter_all, N, m_order)
 
     #= Define the first order raw moments μ and
        central moments Mᵢ as symbolic variables
@@ -165,20 +151,16 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
         push!(eqs, D(M[i]) ~ dM[i])
     end
 
-    vars = extract_variables(eqs, N, q_order)
+    vars = extract_variables(eqs, N, q_order, iter_all)
     odes = ODESystem(eqs, iv, vars, get_ps(rn);
                      name=Symbol(nameof(rn),"_central_moment_eqs_m",m_order,"_q",q_order))
 
-    CentralMomentEquations(
+    CentralMomentEquations{N}(
         odes,
         μ,
         M,
-        N,
         m_order,
         q_order,
-        iter_all,
-        iter_m,
-        iter_q,
-        iter_1
+        iter_all
     )
 end
