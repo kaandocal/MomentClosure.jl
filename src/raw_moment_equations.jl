@@ -43,24 +43,8 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
     D = Differential(iv)
     eqs = Equation[]
 
-    for i in vcat(iter_1, iter_m)
-        dμi = 0
-        for r = 1:numreactions(rn)
-            iter_j = filter(x -> all(x .<= i) && sum(x) <= sum(i) - 1, iter_all)
-            for j in iter_j
-                factor_j = 1.0
-                for k = 1:N
-                    factor_j *= expected_coeff(S[k, r], i[k] - j[k]) * binomial(i[k], j[k])
-                end
-                suma = 0.0
-                for k = 1:length(term_factors[r])
-                    suma += term_factors[r][k] * μ[j.+Tuple(term_powers[r][k])]
-                end
-                dμi += factor_j * suma
-            end
-        end
-
-        push!(eqs, D(μ[i]) ~ mc_expand(dμi))
+    for i in Iterators.flatten((iter_1, iter_m))
+        push!(eqs, D(μ[i]) ~ get_dμ(i, iter_all, S, μ, term_factors, term_powers))
     end
 
     vars = extract_variables(eqs, N, q_order, iter_all)
@@ -72,7 +56,27 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
         μ,
         m_order,
         q_order,
-        iter_all
+        iter_all,
+        iter_m
     )
+end
 
+function get_dμ(i::NTuple{N,Int}, iter_all, S, μ, term_factors, term_powers) where {N}
+    ret = 0
+    for r = 1:size(S, 2)
+        iter_j = filter(x -> all(x .<= i) && sum(x) <= sum(i) - 1, iter_all)
+        for j in iter_j
+            factor_j = 1
+            for k = 1:N
+                factor_j *= expected_coeff(S[k, r], i[k] - j[k]) * binomial(i[k], j[k])
+            end
+            suma = 0
+            for k = 1:length(term_factors[r])
+                suma += term_factors[r][k] * μ[j.+Tuple(term_powers[r][k])]
+            end
+            ret += factor_j * suma
+        end
+    end
+
+    mc_expand(ret)
 end

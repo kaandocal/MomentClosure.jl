@@ -60,9 +60,6 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
     #= Define the first order raw moments μ and
        central moments Mᵢ as symbolic variables
        using the functionality of ModelingToolkit.jl =#
-
-    @parameters t # need to define time as a parameter
-
     μ = define_μ(N, 1, iter_1)
     M = define_M(N, q_order, iter_all)
 
@@ -70,75 +67,17 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
     to all molecular species up to order defined by q_order.
     For example, Da[2][(1, 2)] is equivalent to (∂³/∂n₁∂n₂²) a₂(μ) =#
 
-    Da = []
     # define the number of molecules of each species as a variable (required for the differentiation)
     n = species(rn)
     dict_n_to_μ = Dict(zip(n, values(μ)))
 
-    # save derivatives in a dictionary
-    derivs = Dict()
-    for r in 1:R
-        for k in iter_all
-            derivs[k] = a[r]
-            for i in 1:N
-                for d in 1:k[i]
-                    derivs[k] = expand_derivatives(Differential(n[i])(derivs[k]), true) # simplify = true/false
-                end
-            end
-            derivs[k] = substitute(derivs[k], dict_n_to_μ)
-        end
-        push!(Da, copy(derivs))
-    end
+    Da = get_Da(a, iter_all, n, dict_n_to_μ)
 
     # generate the equations for the first raw moments (means)
-    du = []
-    for r in 1:R
-        suma = 0
-        for j in iter_all
-            suma = suma + Da[r][j]*M[j]*1//fact(j)
-            #suma = simplify(suma)
-            # here // gives fractions (otherwise it's a float number)
-            # only issue is that it does not latexify properly
-        end
-
-        for i in 1:N
-            if r == 1
-                push!(du, S[i,r]*suma)
-            else
-                du[i] = S[i, r]*suma + du[i]
-            end
-            du[i] = mc_expand(du[i])
-        end
-    end
+    du = get_du(Da, iter_all, M, S)
 
     # generate the equations for the central moments up to order m
-
-    dM = Dict()
-    for i in iter_m
-        dM[i] = 0
-        for r in 1:R
-            iter_j = filter(x -> all(x .<= i) && sum(x) <= sum(i)-1, iter_all)
-            for j in iter_j
-                factor_j = 1.0
-                for k in 1:N
-                    factor_j *= expected_coeff(S[k, r], i[k]-j[k]) * binomial(i[k], j[k])
-                end
-                # m+1 -> MA_order
-                iter_k = filter(x -> sum(x) <= q_order-sum(j), iter_all)
-                suma = 0.0
-                for k in iter_k
-                    suma += Da[r][k]*M[j.+k]*1//fact(k)
-                end
-                dM[i] += factor_j*suma
-            end
-        end
-        for j in 1:N
-            if i[j] > 0
-                dM[i] -= i[j]*du[j]*M[i.-iter_1[j]]
-            end
-        end
-        dM[i] = mc_expand(dM[i])
-    end
+    dM = get_dM(Da, du, iter_all, iter_m, M, S, q_order)
 
     iv = get_iv(rn)
     D = Differential(iv)
@@ -162,6 +101,84 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
         M,
         m_order,
         q_order,
-        iter_all
+        iter_all,
+        iter_m
     )
+end
+
+function get_Da(propensities, iter_all, n, dict_n_to_μ)
+    ret = []
+
+    # save derivatives in a dictionary
+    derivs = Dict()
+    for r in 1:length(propensities)
+        for k in iter_all
+            derivs[k] = propensities[r]
+            for i in 1:length(n)
+                for d in 1:k[i]
+                    derivs[k] = expand_derivatives(Differential(n[i])(derivs[k]), true) # simplify = true/false
+                end
+            end
+            derivs[k] = substitute(derivs[k], dict_n_to_μ)
+        end
+
+        push!(ret, copy(derivs))
+    end
+
+    ret
+end
+
+function get_du(Da, iter_all, M, S)
+    ret = Any[ 0 for i in 1:size(S,1) ]
+    for r in 1:length(Da)
+        suma = 0
+        for j in iter_all
+            suma = suma + Da[r][j]*M[j]*1//fact(j)
+            #suma = simplify(suma)
+            # here // gives fractions (otherwise it's a float number)
+            # only issue is that it does not latexify properly
+        end
+
+        for i in 1:size(S, 1)
+            ret[i] += S[i, r]*suma
+        end
+    end
+
+    mc_expand.(ret)
+end
+
+function get_dM(Da, du, iter_all, iter_m, M, S, q_order)
+    ret = Dict()
+
+    iter_1 = get_iter_1(iter_all, length(du))
+
+    for i in iter_m
+        dMi = 0
+        for r in 1:length(Da)
+            iter_j = filter(x -> all(x .<= i) && sum(x) <= sum(i)-1, iter_all)
+            for j in iter_j
+                factor_j = 1
+                for k in 1:length(du)
+                    factor_j *= expected_coeff(S[k, r], i[k]-j[k]) * binomial(i[k], j[k])
+                end
+                # m+1 -> MA_order
+                iter_k = filter(x -> sum(x) <= q_order-sum(j), iter_all)
+                suma = 0
+                for k in iter_k
+                    suma += Da[r][k]*M[j.+k]*1//fact(k)
+                end
+                dMi += factor_j*suma
+            end
+        end
+
+        for j in 1:length(du)
+            if i[j] > 0
+                dMi -= i[j]*du[j]*M[i.-iter_1[j]]
+            end
+        end
+
+        ret[i] = mc_expand(dMi)
+    end
+
+    ret
 end

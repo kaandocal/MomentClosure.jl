@@ -5,6 +5,8 @@
 struct VariableSource end
 using Combinatorics
 
+const MomentIdx{N} = NTuple{N,Int}
+
 function construct_iter_all(N::Int, order::Int)
     #Construct an ordered iterator going over all moments
     # sequentially in terms of order

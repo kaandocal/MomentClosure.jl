@@ -27,9 +27,9 @@ struct RawMomentEquations{N} <: MomentEquations{N}
     iter_q::Vector{NTuple{N,Int}}
 end
 
-function RawMomentEquations{N}(odes, μ, m_order, q_order, iter_all) where {N}
-    RawMomentEquations{N}(odes, μ, m_order, q_order, iter_all, 
-                          get_iter_m(iter_all, N, m_order), 
+function RawMomentEquations{N}(odes, μ, m_order, q_order, iter_all, 
+                               iter_m=get_iter_m(iter_all, N, m_order)) where {N}
+    RawMomentEquations{N}(odes, μ, m_order, q_order, iter_all, iter_m,
                           get_iter_q(iter_all, N, m_order, q_order))
 end
 
@@ -60,9 +60,9 @@ struct CentralMomentEquations{N} <: MomentEquations{N}
     iter_q::Vector{NTuple{N,Int}}
 end
 
-function CentralMomentEquations{N}(odes, μ, M, m_order, q_order, iter_all) where {N}
-    CentralMomentEquations{N}(odes, μ, M, m_order, q_order, iter_all, 
-                              get_iter_m(iter_all, N, m_order), 
+function CentralMomentEquations{N}(odes, μ, M, m_order, q_order, iter_all,
+                                   iter_m=get_iter_m(iter_all, N, m_order)) where {N}
+    CentralMomentEquations{N}(odes, μ, M, m_order, q_order, iter_all, iter_m,
                               get_iter_q(iter_all, N, m_order, q_order))
 end
 
