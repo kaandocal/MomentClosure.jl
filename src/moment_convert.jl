@@ -76,7 +76,7 @@ to the corresponding central moment expressions.
 """
 function cumulants_to_central_moments(N::Int, max_order::Int,
                                       iter_all=construct_iter_all(N, max_order),
-                                      μ=define_μ(N, 1, iter_all),
+                                      μ=define_μ(N, 1),
                                       M=define_M(N, max_order, iter_all))
 
     # obtain cumulants up to (m_order)^th order in terms of

@@ -1,7 +1,10 @@
-import SymbolicUtils: <ₑ
-<ₑ(a::SymbolicUtils.Symbolic, b::Num) = false
-<ₑ(a::Num, b::SymbolicUtils.Symbolic) = true
+#import SymbolicUtils: <ₑ
+#<ₑ(a::SymbolicUtils.Symbolic, b::Num) = false
+#<ₑ(a::Num, b::SymbolicUtils.Symbolic) = true
 
+struct VariableSource end
+
+# Remove later
 function gen_iter(n::Int, d::Int)
     # based on https://twitter.com/evalparse/status/1107964924024635392
     iter = NTuple{n,Int}[]
@@ -53,7 +56,7 @@ function define_μ(N::Int, order::Int, iter=construct_iter_all(N, order))
             sym_name = Symbol('μ', join(map_subscripts(indices[i])))
             sym_raw = Sym{FnType{Tuple{Any}, Real}}(sym_name)
             term_raw = Term{Real}(sym_raw, [t])
-            μs[idx] = SymbolicUtils.setmetadata(term_raw, Symbolics.VariableSource, 
+            μs[idx] = SymbolicUtils.setmetadata(term_raw, VariableSource, 
                                                 (:momentclosure, sym_name))
         end
     end
@@ -77,7 +80,7 @@ function define_M(N::Int, order::Int, iter=construct_iter_all(N, order))
             sym_name = Symbol('M', join(map_subscripts(indices[i])))
             sym_raw = Sym{FnType{Tuple{Any}, Real}}(sym_name)
             term_raw = Term{Real}(sym_raw, [t])
-            Ms[idx] = SymbolicUtils.setmetadata(term_raw, Symbolics.VariableSource, 
+            Ms[idx] = SymbolicUtils.setmetadata(term_raw, VariableSource, 
                                                 (:momentclosure, sym_name))
         end
     end
@@ -149,14 +152,14 @@ end
 #	isequal(x, y)
 #end
 
-varequal(x, y) = isequal(x,y)#polyescapeisequal(x, y)
+#varequal(x, y) = isequal(x,y)#polyescapeisequal(x, y)
 
 #function varequal(x::Term, y::Term)
 #	x.f == y.f || return false
 #	all(varequal.(arguments(x), arguments(y)))
 #end
 
-#isvar(x::Symbolic, vars) = any(var -> varequal(x, var), vars)
+isvar(x::Symbolic, vars) = any(var -> isequal(x, var), vars)
 
 function extract_pwr!(powers, expr::Symbolic, smap, vars)
     args = arguments(expr)
@@ -198,7 +201,7 @@ function polynomial_propensities(a::Vector, rn::Union{ReactionSystem, ReactionSy
     N = numspecies(rn)
     # Can this replaced by states(rn)?
     vars = [x for (x,y) in Base.sort(collect(smap), by=x->x[2])]
-    iv = rn.iv
+    iv = get_iv(rn)
 
     all_factors = [[] for i = 1:R]
     all_powers = [Vector{Int}[] for i = 1:R]
@@ -215,7 +218,7 @@ function polynomial_propensities(a::Vector, rn::Union{ReactionSystem, ReactionSy
         elseif isvar(expr, vars)
 
             push!(all_factors[rind], 1)
-            push!(all_powers[rind], map(v -> varequal(expr, v), vars))
+            push!(all_powers[rind], map(v -> isequal(expr, v), vars))
 
         elseif operation(expr) == ^ #Symbolics.Pow
 

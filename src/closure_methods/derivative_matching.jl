@@ -104,7 +104,8 @@ function derivative_matching(sys::MomentEquations, binary_vars::Array{Int,1}=Int
     if typeof(sys) == CentralMomentEquations
         # construct the corresponding truncated expressions of higher order
         # central moments from the obtained raw moment expressions
-        raw_to_central = raw_to_central_moments(N, sys.q_order, closed_μ, bernoulli=isbernoulli)
+        raw_to_central = raw_to_central_moments(N, sys.q_order, sys.iter_all, 
+                                                closed_μ, bernoulli=isbernoulli)
         central_to_raw = central_to_raw_moments(N, sys.q_order)
         closure_M = OrderedDict()
         for i in sys.iter_q

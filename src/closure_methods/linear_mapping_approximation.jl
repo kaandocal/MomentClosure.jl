@@ -67,7 +67,7 @@ function linear_mapping_approximation(rn_nonlinear::T, rn_linear::T, binary_vars
       end
 
       LMA_eqs = Equation[]
-      for eq in sys.odes.eqs
+      for eq in get_eqs(sys.odes)
             rhs = substitute(eq.rhs, sub_params)
             rhs = mc_expand(rhs)
             push!(LMA_eqs, Equation(eq.lhs, rhs))
@@ -75,10 +75,10 @@ function linear_mapping_approximation(rn_nonlinear::T, rn_linear::T, binary_vars
 
       field_values = [getfield(sys, field) for field in fieldnames(typeof(sys))]
 
-      iv = sys.odes.iv
+      iv = get_iv(sys.odes)
       ps = params(rn_nonlinear)
       vars = sys.odes.states
-      odes = ODESystem(LMA_eqs, iv, vars, ps; name=Symbol(rn_nonlinear.name,"_lma_",rn_linear.name,"_",m_order))
+      odes = ODESystem(LMA_eqs, iv, vars, ps; name=Symbol(nameof(rn_nonlinear),"_lma_",m_order))
       new_system = typeof(sys)(odes, field_values[2:end]...)
 
       new_system, sub_params

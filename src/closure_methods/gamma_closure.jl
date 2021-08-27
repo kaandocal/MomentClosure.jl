@@ -155,7 +155,7 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
     # construct the corresponding truncated expressions of higher order
     # central moments from the obtained gamma raw moment expressions
     if sys isa CentralMomentEquations
-        raw_to_central = raw_to_central_moments(N, sys.q_order, μ)
+        raw_to_central = raw_to_central_moments(N, sys.q_order, sys.iter_all, μ)
         central_to_raw = central_to_raw_moments(N, sys.q_order)
         closure_M = OrderedDict()
         for i in sys.iter_q
@@ -189,7 +189,7 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
         redundant_iter, redundant_eqs, iter_sub = bernoulli_reduce(sys, binary_vars)
 
         closed_eqs = Equation[]
-        for (i, eq) in enumerate(sys.odes.eqs)
+        for (i, eq) in enumerate(get_eqs(sys.odes))
             if !(i in redundant_eqs)
 
                 closed_rhs = substitute(eq.rhs, closure_exp)
@@ -215,8 +215,8 @@ function gamma_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
         end
 
         vars = extract_variables(closed_eqs, N, sys.q_order)
-        odes = ODESystem(closed_eqs, sys.odes.iv, vars, sys.odes.ps;
-                         name=Symbol(sys.name,"_gamma_closure"))
+        odes = ODESystem(closed_eqs, get_iv(sys.odes), vars, sys.odes.ps;
+                         name=Symbol(nameof(sys),"_gamma_closure"))
 
         return ClosedMomentEquations(odes, closure, sys)
 

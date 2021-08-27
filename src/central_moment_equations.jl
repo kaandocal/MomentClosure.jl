@@ -154,7 +154,9 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
         dM[i] = mc_expand(dM[i])
     end
 
-    D = Differential(rn.iv)
+    iv = get_iv(rn)
+
+    D = Differential(iv)
     eqs = Equation[]
     for i in 1:N
         push!(eqs, D(μ[iter_1[i]]) ~ du[i])
@@ -164,8 +166,8 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
     end
 
     vars = extract_variables(eqs, N, q_order)
-    odes = ODESystem(eqs, rn.iv, vars, rn.ps;
-                     name=Symbol(rn.name,"_central_moment_eqs_m",m_order,"_q",q_order))
+    odes = ODESystem(eqs, iv, vars, get_ps(rn);
+                     name=Symbol(nameof(rn),"_central_moment_eqs_m",m_order,"_q",q_order))
 
     CentralMomentEquations(
         odes,

@@ -4,6 +4,8 @@ import Catalyst: species, params, reactions, speciesmap, paramsmap, numspecies,
 				 numreactions, numparams, substoichmat, prodstoichmat, netstoichmat, ReactionSystem, jumpratelaw
 
 using ModelingToolkit
+import ModelingToolkit: get_iv, get_ps, get_eqs
+
 using Symbolics: value, var_from_nested_derivative, map_subscripts
 
 using SciMLBase, SciMLBase.EnsembleAnalysis
@@ -31,11 +33,14 @@ export generate_central_moment_eqs, generate_raw_moment_eqs, bernoulli_moment_eq
 	   get_raw_moments, get_central_moments, get_cumulants, get_moments_FSP,
 	   linear_mapping_approximation
 
+mc_expand = SymbolicUtils.expand
+mc_simplify = SymbolicUtils.simplify
+
 # reexporting from ModelingToolkit & Symbolics
 # needed for ReactionSystemMod definition
 export @parameters, @variables
 
-include("simplify.jl")
+#include("simplify.jl")
 
 include("reaction_systems.jl")
 include("moment_equations.jl")

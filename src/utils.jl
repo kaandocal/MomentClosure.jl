@@ -103,7 +103,7 @@ function get_central_moments(sol::EnsembleSolution, order::Int; naive::Bool=true
                 μ[iter] = data[keys[iter]...]
             end
         end
-        M_temp = raw_to_central_moments(N, order, μ)
+        M_temp = raw_to_central_moments(N, order, iter_all, μ)
         for iter in iter_M
             M[iter][t_pt] = M_temp[iter]
         end
@@ -298,9 +298,10 @@ function format_moment_eqs(eqs::MomentEquations)
 
     odes = eqs.odes
     exprs  = []
-    for i in 1:size(odes.eqs)[1]
+    eqs = get_eqs(odes)
+    for i in 1:size(eqs, 1)
         key = odes.states[i]
-        eq = odes.eqs[i].rhs
+        eq = eqs[i].rhs
         expr = "d"*string(key)*"/dt = "*string(eq)
         expr = replace(expr, "(t)"=>"")
         expr = replace(expr, ".0"=>"")

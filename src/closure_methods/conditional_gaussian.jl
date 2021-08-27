@@ -133,8 +133,9 @@ function conditional_gaussian_closure(sys::MomentEquations,
         closure_exp = OrderedDict()
         # construct the corresponding truncated expressions of higher order
         # central moments from the obtained raw moment expressions
-        raw_to_central_exp = raw_to_central_moments(N, sys.q_order, μ_M_exp, bernoulli=true)
-        raw_to_central = raw_to_central_moments(N, sys.q_order, μ_M, bernoulli=true)
+        raw_to_central_exp = raw_to_central_moments(N, sys.q_order, sys.iter_all, μ_M_exp, 
+                                                    bernoulli=true)
+        raw_to_central = raw_to_central_moments(N, sys.q_order, sys.iter_all, μ_M, bernoulli=true)
         for i in sys.iter_q
             closure_exp[sys.M[i]] = mc_simplify(raw_to_central_exp[i], expand=true)
             closure[sys.M[i]] = mc_simplify(raw_to_central[i], expand=true)

@@ -84,7 +84,7 @@ function bernoulli_moment_eqs(sys::MomentEquations, binary_vars::Array{Int,1})
 
     # construct the cleaned moment equations
     clean_eqs = Equation[]
-    for (i, eq) in enumerate(sys.odes.eqs)
+    for (i, eq) in enumerate(get_eqs(sys.odes))
         if !(i in redundant_eqs)
             clean_rhs = substitute(eq.rhs, iter_sub)
             clean_rhs = mc_expand(clean_rhs)
@@ -107,12 +107,11 @@ function bernoulli_moment_eqs(sys::MomentEquations, binary_vars::Array{Int,1})
     field_values[ind_iter_all] = clean_iter #sys.iter_all
 
     ## fixing ODE system to preserve consistent ordering of parameters
-    iv = sys.odes.iv
-    ps = sys.odes.ps
+    iv = get_iv(sys.odes)
+    ps = get_ps(sys.odes)
 
     vars = extract_variables(clean_eqs, sys.N, sys.q_order)
-    odes = ODESystem(clean_eqs, iv, vars, ps; name=Symbol(sys.odes.name,"_bernoulli"))
-
+    odes = ODESystem(clean_eqs, iv, vars, ps; name=Symbol(nameof(sys.odes),"_bernoulli"))
 
     new_system = typeof(sys)(odes, field_values[2:end]...)
 

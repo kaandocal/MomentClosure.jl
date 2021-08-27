@@ -88,3 +88,7 @@ end
 function SciMLBase.ODEProblem(eqs::MomentEquations, args...; kwargs...)
     ODEProblem(eqs.odes, args...; kwargs...)
 end
+
+function Base.nameof(eqs::Union{RawMomentEquations,CentralMomentEquations,ClosedMomentEquations}) 
+    nameof(eqs.odes)
+end

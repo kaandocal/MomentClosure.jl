@@ -71,6 +71,8 @@ struct ReactionSystemMod
 
 end
 
+Base.nameof(sys::ReactionSystemMod) = sys.name
+
 # Implementing a number of basic functions allowing easy access to reaction network properties.
 # The functions are identical to the Catalyst ones (full credit to the developers) in
 # order to keep the APIs consistent
@@ -184,3 +186,6 @@ function propensities(rn::ReactionSystem; combinatoric_ratelaw=true)
 end
 
 propensities(rn::ReactionSystemMod; combinatoric_ratelaw=true) = rn.a
+
+get_iv(rn::ReactionSystemMod) = rn.iv
+get_ps(rn::ReactionSystemMod) = rn.ps
