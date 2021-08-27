@@ -98,9 +98,9 @@ function bernoulli_moment_eqs(sys::MomentEquations, binary_vars::Array{Int,1})
     iter_q = filter(x -> sys.m_order < sum(x) <= sys.q_order, clean_iter)
 
     field_values = [getfield(sys, field) for field in fieldnames(typeof(sys))]
-    ind_iter_m = findall(x -> x==:iter_m, fieldnames(typeof(sys)))[1]
-    ind_iter_q = findall(x -> x==:iter_q, fieldnames(typeof(sys)))[1]
-    ind_iter_all = findall(x -> x==:iter_all, fieldnames(typeof(sys)))[1]
+    ind_iter_m = findfirst(x -> x==:iter_m, fieldnames(typeof(sys)))
+    ind_iter_q = findfirst(x -> x==:iter_q, fieldnames(typeof(sys)))
+    ind_iter_all = findfirst(x -> x==:iter_all, fieldnames(typeof(sys)))
 
     field_values[ind_iter_m] = iter_m       #sys.iter_m
     field_values[ind_iter_q] = iter_q       #sys.iter_q

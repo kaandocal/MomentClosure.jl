@@ -3,30 +3,16 @@
 #<ₑ(a::Num, b::SymbolicUtils.Symbolic) = true
 
 struct VariableSource end
-
-# Remove later
-function gen_iter(n::Int, d::Int)
-    # based on https://twitter.com/evalparse/status/1107964924024635392
-    iter = NTuple{n,Int}[]
-    for x in partitions(d + n, n)
-        x = x .- 1
-        if all(x .<= d)
-            ys = Set(multiset_permutations(x, n))
-            for y in ys
-                push!(iter, Tuple(y))
-            end
-        end
-    end
-    iter
-end
+using Combinatorics
 
 function construct_iter_all(N::Int, order::Int)
+
     #Construct an ordered iterator going over all moments
     # sequentially in terms of order
 
     iters = NTuple{N,Int}[]
     for d in 0:order
-        x = Base.sort(gen_iter(N, d), rev=true)
+        x = map(Tuple, multiexponents(N, d))
         append!(iters, x)
     end
 
