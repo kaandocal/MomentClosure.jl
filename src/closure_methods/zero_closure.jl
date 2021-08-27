@@ -22,8 +22,8 @@ function zero_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
 
         for i in unique_iter_q
             μ[i] = -(raw_to_central[i]-μ[i])
-            closure[sys.μ[i]] = simplify(μ[i], expand=true)
-            μ[i] = simplify(substitute(μ[i], closure_exp), expand=true)
+            closure[sys.μ[i]] = mc_simplify(μ[i], expand=true)
+            μ[i] = mc_simplify(substitute(μ[i], closure_exp), expand=true)
             closure_exp[sys.μ[i]] = μ[i]
 
             perms = collect(multiset_permutations(i, length(i)))[2:end]

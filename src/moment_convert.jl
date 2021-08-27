@@ -19,23 +19,18 @@ Dict{Any,Any} with 5 entries:
   (1, 1) => μ₁₁(t) - ((μ₀₁(t))*(μ₁₀(t)))
 ```
 """
-function cumulants_to_raw_moments(N::Int, max_order::Int, μ=nothing)
-
+function cumulants_to_raw_moments(N::Int, max_order::Int, 
+                                  iter_all=construct_iter_all(N, max_order),
+                                  μ=define_μ(N, max_order, iter_all))
     # following Smith (1995)
-
-    iter_all = construct_iter_all(N, max_order)
     iter_1 = filter(x -> sum(x) == 1, iter_all)
 
-    if μ == nothing
-        μ = define_μ(N, max_order)
-    else
-        @assert (μ isa Dict) && length(μ) == length(iter_all) "passed arguments are inconsistent (μ vs N & order)"
-    end
+    @assert length(μ) == length(iter_all) "passed arguments are inconsistent (μ vs N & order)"
 
-    K = Dict()
-    μ_star = Dict()
+    K = Dict{NTuple{N,Int},Any}()
+    μ_star = Dict{NTuple{N,Int},Any}()
 
-    μ_star[Tuple(fill(0, N))] = 1.0
+    μ_star[Tuple(zeros(N))] = 1.0
     for i in 1:N
         eᵢ = iter_1[i]
         K[eᵢ] = μ[eᵢ]
@@ -47,35 +42,28 @@ function cumulants_to_raw_moments(N::Int, max_order::Int, μ=nothing)
         iter_order = filter(x -> sum(x) == order, iter_all)
         for r in iter_order
 
-            ind = findall(x -> x!= 0, r)[end]
+            ind = findlast(!iszero, r)
             r_sub = r .- iter_1[ind]
             iter_i = filter(x -> all(x .<= r_sub), iter_all)
 
-            suma = 0.0
+            suma = 0
             for i in iter_i
-                factor = 1.0
-                for j in 1:N
-                    factor *= binomial(r_sub[j], i[j])
-                end
+                factor = prod(binomial.(r_sub, i))
                 suma += factor*μ[r.-i]*μ_star[i]
             end
-            K[r] = simplify(suma)
+            K[r] = mc_simplify(suma)
 
-            suma = 0.0
+            suma = 0
             for i in iter_i
-                factor = 1.0
-                for j in 1:N
-                    factor *= binomial(r_sub[j], i[j])
-                end
+                factor = prod(binomial.(r_sub,i))
                 suma += factor*(-K[r.-i])*μ_star[i]
             end
-            μ_star[r] = simplify(suma)
+            μ_star[r] = mc_simplify(suma)
         end
 
     end
 
     K
-
 end
 
 """
@@ -86,18 +74,18 @@ in terms of raw moments ``M``. Return a Dictionary mapping from
 vector ``\\mathbf{i}`` (that indicates the cumulant ``κ_{\\mathbf{i}}``)
 to the corresponding central moment expressions.
 """
-function cumulants_to_central_moments(N::Int, max_order::Int)
+function cumulants_to_central_moments(N::Int, max_order::Int,
+                                      iter_all=construct_iter_all(N, max_order),
+                                      μ=define_μ(N, 1, iter_all),
+                                      M=define_M(N, max_order, iter_all))
 
     # obtain cumulants up to (m_order)^th order in terms of
     # central moments using formula from Balakrishan et al. (1998)
 
-    K = Dict()
-    M_star = Dict()
+    K = Dict{NTuple{N,Int},Any}()
+    M_star = Dict{NTuple{N,Int},Any}()
 
-    iter_all = construct_iter_all(N, max_order)
     iter_1 = filter(x -> sum(x) == 1, iter_all)
-    μ = define_μ(N, 1)
-    M = define_M(N, max_order)
 
     M_star[Tuple(zeros(N))] = 1.0
     for i in 1:N
@@ -112,42 +100,38 @@ function cumulants_to_central_moments(N::Int, max_order::Int)
         iter_order = filter(x -> sum(x) == order, iter_all)
         for r in iter_order
 
-            ind = findall(x -> x!= 0, r)[end]
+            ind = findlast(!iszero, r)
             r_sub = r .- iter_1[ind]
             iter_i = filter(x -> all(x .<= r_sub), iter_all)
             # find the cumulant \kappa_{\bm{r}}}
             suma = 0.0
             for i in iter_i
-                factor = 1.0
-                for j in 1:N
-                    factor *= binomial(r_sub[j], i[j])
-                end
+                factor = prod(binomial.(r_sub, i))
                 suma += factor*M[r.-i]*M_star[i]
             end
-            K[r] = simplify(suma)
+            K[r] = mc_simplify(suma)
 
             # Find the central moment \M^*_{\bm{r}}
             suma = 0.0
             for i in iter_i
-                factor = 1.0
-                for j in 1:N
-                    factor *= binomial(r_sub[j], i[j])
-                end
+                factor = prod(binomial.(r_sub, i))
                 suma += factor*(-K[r.-i])*M_star[i]
             end
             suma -= -μ[iter_1[ind]]*M_star[r_sub]
-            M_star[r] = simplify(suma)
+            M_star[r] = mc_simplify(suma)
 
         end
 
     end
 
     K
-
 end
 
 
-function raw_to_central_moments(N::Int, order::Int, μ=nothing; bernoulli=false)
+function raw_to_central_moments(N::Int, order::Int,
+                                iter_all=construct_iter_all(N, order),
+                                μ=define_μ(N, order, iter_all),
+                                M=define_M(N, order, iter_all); bernoulli=false)
 
     # Return a dictionary of central moments expressed in terms of raw moments
     # example use:
@@ -156,21 +140,15 @@ function raw_to_central_moments(N::Int, order::Int, μ=nothing; bernoulli=false)
     # note that μ is an optional argument which can be used to pass
     # arbitrary values/symbols for each raw moment (different from default μᵢ)
 
-    iter_all = construct_iter_all(N, order)
     iter_μ = filter(x -> sum(x) == 1, iter_all)
-    M = define_M(N, order)
-    if μ == nothing
-        μ = define_μ(N, order)
-    elseif !(μ isa Dict) || length(μ) != length(iter_all)
+    if !(μ isa AbstractDict) || length(μ) != length(iter_all)
         if bernoulli
             iter_all = keys(μ)
         else
             error("passed arguments are inconsistent (μ vs N & order)")
         end
-    else
-        iter_all = construct_iter_all(N, order)
     end
-    raw_to_central = Dict()
+    raw_to_central = Dict{NTuple{N,Int},Any}()
 
     for i in iter_all
 
@@ -183,26 +161,26 @@ function raw_to_central_moments(N::Int, order::Int, μ=nothing; bernoulli=false)
             end
             suma += term
         end
-        raw_to_central[i] = simplify(suma)
+        raw_to_central[i] = mc_simplify(suma)
     end
 
     raw_to_central
 
 end
 
-function central_to_raw_moments(N::Int, order::Int)
+function central_to_raw_moments(N::Int, order::Int,
+                                iter_all=construct_iter_all(N, order),
+                                μ=define_μ(N, order, iter_all),
+                                M=define_M(N, order, iter_all))
 
     # Return a dictionary of raw moments expressed in terms of central moments
     # example use:
     # 1 central_to_raw = central_to_raw_moments(2, 3)
     # 2 μ₁₂ = central_to_raw[(1,2)] = 2 M₁₁ μ₀₁ + M₀₂μ₁₀ + M₁₂ + μ₁₀ μ₀₁²
 
-    iter_all = construct_iter_all(N, order)
     iter_μ = filter(x -> sum(x) == 1, iter_all)
-    M = define_M(N, order)
-    μ = define_μ(N, order)
 
-    central_to_raw = Dict()
+    central_to_raw = Dict{NTuple{N,Int},Any}()
 
     for i in iter_all
 
@@ -215,7 +193,7 @@ function central_to_raw_moments(N::Int, order::Int)
             end
             suma += term
         end
-        central_to_raw[i] = simplify(suma)
+        central_to_raw[i] = mc_simplify(suma)
     end
 
     central_to_raw

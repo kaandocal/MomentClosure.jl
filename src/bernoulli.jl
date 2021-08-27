@@ -55,9 +55,9 @@ function bernoulli_reduce(sys::MomentEquations, binary_vars::Array{Int,1})
         iter_sub = Dict()
         for iter in redundant_iter
             M_temp = raw_to_central[iter]
-            M_temp = simplify(substitute(M_temp, μ_redundant_sub))
+            M_temp = mc_simplify(substitute(M_temp, μ_redundant_sub))
             M_temp = substitute(M_temp, μ_clean_sub)
-            M_temp = simplify(M_temp)
+            M_temp = mc_simplify(M_temp)
             iter_sub[sys.M[iter]] = M_temp
         end
 
@@ -87,7 +87,7 @@ function bernoulli_moment_eqs(sys::MomentEquations, binary_vars::Array{Int,1})
     for (i, eq) in enumerate(sys.odes.eqs)
         if !(i in redundant_eqs)
             clean_rhs = substitute(eq.rhs, iter_sub)
-            clean_rhs = expand(clean_rhs)
+            clean_rhs = mc_expand(clean_rhs)
             push!(clean_eqs, Equation(eq.lhs, clean_rhs))
         end
     end

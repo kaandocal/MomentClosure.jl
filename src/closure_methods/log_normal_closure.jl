@@ -44,7 +44,7 @@ function log_normal_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[
             end
             term *= Σ[j,j]^(i[j]*(i[j]-1)/2)
         end
-        μ[i] = simplify(term)
+        μ[i] = mc_simplify(term)
         closure[μ_symbolic[i]] = μ[i]
 
         perms = collect(multiset_permutations(i, length(i)))[2:end]
@@ -72,7 +72,7 @@ function log_normal_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[
         for i in sys.iter_q
             closure_exp[M[i]] = raw_to_central[i]
             closure_M[M[i]] = closure[μ_symbolic[i]]-(central_to_raw[i]-M[i])
-            closure_M[M[i]] = simplify(closure_M[M[i]])
+            closure_M[M[i]] = mc_simplify(closure_M[M[i]])
         end
         closure = closure_M
     else

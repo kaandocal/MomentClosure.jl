@@ -78,7 +78,7 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
     @parameters t # need to define time as a parameter
 
     μ = define_μ(N, 1, iter_1)
-    M = define_M(N, q_order)
+    M = define_M(N, q_order, iter_all)
 
     #= Obtain all derivatives of the propensity functions with respect
     to all molecular species up to order defined by q_order.
@@ -121,7 +121,7 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
             else
                 du[i] = S[i, r]*suma + du[i]
             end
-            du[i] = expand(du[i])
+            du[i] = mc_expand(du[i])
         end
     end
 
@@ -151,7 +151,7 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
                 dM[i] -= i[j]*du[j]*M[i.-iter_1[j]]
             end
         end
-        dM[i] = expand(dM[i])
+        dM[i] = mc_expand(dM[i])
     end
 
     D = Differential(rn.iv)

@@ -51,7 +51,9 @@ struct ReactionSystemMod
     """Stoichiometric matrix"""
     S::Matrix
 
-    function ReactionSystemMod(iv, states, ps, a, S)
+    name::Symbol
+
+    function ReactionSystemMod(iv, states, ps, a, S, name=gensym())
         if size(S)[1] != size(states)[1]
             error("Inconsistent stoichiometric matrix dimensions and number of species")
         elseif size(S)[2] != size(a)[1]
@@ -62,7 +64,7 @@ struct ReactionSystemMod
             else
             # initially using @parameters and @variables macros we have defined Num type symbols
             # which have to be converted to SymbolicUtils supported types for further manipulations
-                new(value(iv), value.(states), value.(ps), simplify.(value.(a)), value.(S))
+                new(value(iv), value.(states), value.(ps), mc_simplify.(value.(a)), value.(S), name)
             end
         end
     end
@@ -157,13 +159,11 @@ or [`ReactionSystemMod`](@ref). Note that in case of a Catalyst's [`ReactionSyst
 the transpose of [`netstoichmat`]((https://catalyst.sciml.ai/stable/api/catalyst_api/#Catalyst.netstoichmat)
 is returned.
 """
-function get_S_mat(rn::Union{ReactionSystem, ReactionSystemMod}; smap=speciesmap(rn))
-    if rn isa ReactionSystem
-        netstoichmat(rn; smap)'
-    else
-        ordering = [smap[s] for s in species(rn)]
-        view(rn.S, ordering, :)
-    end
+get_S_mat(rn::ReactionSystem; smap=speciesmap(rn)) = netstoichmat(rn; smap)'
+
+function get_S_mat(rn::ReactionSystemMod; smap=speciesmap(rn))
+    ordering = [ smap[s] for s in species(rn) ]
+    view(rn.S, ordering, :)
 end
 
 """
@@ -179,10 +179,8 @@ Notes:
   *Note* that this field is irrelevant using `ReactionSystemMod` as then the
   propensities are defined directly by the user.
 """
-function propensities(rn::Union{ReactionSystem, ReactionSystemMod}; combinatoric_ratelaw=true)
-    if typeof(rn) == ReactionSystem
-        simplify.(jumpratelaw.(reactions(rn), combinatoric_ratelaw=combinatoric_ratelaw))
-    else
-        rn.a
-    end
+function propensities(rn::ReactionSystem; combinatoric_ratelaw=true)
+    mc_simplify.(jumpratelaw.(reactions(rn), combinatoric_ratelaw=combinatoric_ratelaw))
 end
+
+propensities(rn::ReactionSystemMod; combinatoric_ratelaw=true) = rn.a

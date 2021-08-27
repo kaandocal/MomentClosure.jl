@@ -3,13 +3,8 @@
 # NOTE: only geometric distribution is supported
 # the parameter passed is supposed to be the MEAN value
 #function expected_coeff(x::Union{Int, Sym{ModelingToolkit.Parameter{Real}}}, pwr)
-function expected_coeff(x::Union{Int, Symbolic}, pwr)
-    if typeof(x) == Int64
-        x^pwr
-    else
-        geometric_raw_moment(x, pwr)
-    end
-end
+expected_coeff(x::Int, pwr) = x^pwr
+expected_coeff(x::Symbolic, pwr) = geometric_raw_moment(x, pwr)
 
 function eulerian_number(n, k)
     suma = 0
@@ -29,10 +24,10 @@ function geometric_raw_moment_arbitrary_order(m::Symbolic, n::Int)
     for i in 0:n
         #suma += eulerian_number(n, i) * (1-p)^(n-i)
         suma += eulerian_number(n, i) * m^(n-i) * (1+m)^(i-n)
-        suma = simplify(suma)
+        suma = mc_simplify(suma)
     end
     #return p^(-n) * suma
-    simplify((1+m)^n * suma)
+    (1+m)^n * suma
 end
 
 #function geometric_raw_moment(m::Sym{ModelingToolkit.Parameter{Real}}, n::Int)

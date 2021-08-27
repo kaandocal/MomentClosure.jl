@@ -30,11 +30,11 @@ function normal_closure(sys::MomentEquations, binary_vars::Array{Int,1}=Int[])
             # the last term in the symbolic expression of cumulant κᵣ is Mᵣ (μᵣ)
             # therefore, as we here set κᵣ = 0, only simple manipulation is needed
             closed_moment = -(K[r]-moments[r])
-            closed_moment = simplify(closed_moment, expand=true)
+            closed_moment = mc_simplify(closed_moment, expand=true)
 
             closure[moments[r]] = closed_moment
             closure_exp[moments[r]] = substitute(closed_moment, closure_exp)
-            closure_exp[moments[r]] = simplify(closure_exp[moments[r]], expand=true)
+            closure_exp[moments[r]] = mc_simplify(closure_exp[moments[r]], expand=true)
 
             perms = collect(multiset_permutations(r, length(r)))[2:end]
 

@@ -72,18 +72,18 @@ function conditional_derivative_matching(sys::MomentEquations,
                 γ = A\b
                 conditional_μ = prod([μ[iter_k[i]]^Int(γ[i]) for i in 1:length_k])
                 conditional_μ = μ[bernoulli_iter]*conditional_μ
-                conditional_μ = simplify(conditional_μ, expand=true)
+                conditional_μ = mc_simplify(conditional_μ, expand=true)
 
                 # step 3
                 iter_conditional = filter(x -> 0 < sum(x) <= sum(r), nonbernoulli_iters)
                 conditional_sub = Dict([Pair(μ[iter], μ[iter.+bernoulli_iter]/μ[bernoulli_iter])
                                        for iter in iter_conditional])
                 conditional_μ = substitute(conditional_μ, conditional_sub)
-                conditional_μ = simplify(conditional_μ)
+                conditional_μ = mc_simplify(conditional_μ)
 
                 closure_μ[μ[iter]] = conditional_μ
                 closure_μ_exp[μ[iter]] = substitute(conditional_μ, closure_μ_exp)
-                closure_μ_exp[μ[iter]] = simplify(closure_μ_exp[μ[iter]])
+                closure_μ_exp[μ[iter]] = mc_simplify(closure_μ_exp[μ[iter]])
             else
                 # Case (ii)
 
@@ -103,11 +103,11 @@ function conditional_derivative_matching(sys::MomentEquations,
                 end
                 γ = A\b
                 moment = prod([μ[iter_k[i]]^Int(γ[i]) for i in 1:length_k])
-                moment = simplify(moment)
+                moment = mc_simplify(moment)
 
                 closure_μ[μ[iter]] = moment
                 closure_μ_exp[μ[iter]] = substitute(moment, closure_μ_exp)
-                closure_μ_exp[μ[iter]] = simplify(closure_μ_exp[μ[iter]])
+                closure_μ_exp[μ[iter]] = mc_simplify(closure_μ_exp[μ[iter]])
 
             end
 
@@ -148,10 +148,10 @@ function conditional_derivative_matching(sys::MomentEquations,
         for i in sys.iter_q
             μ_M[i] = closure_μ[μ[i]]
             μ_M[i] = substitute(μ_M[i], μ_central)
-            μ_M[i] = simplify(μ_M[i])
+            μ_M[i] = mc_simplify(μ_M[i])
             μ_M_exp[i] = closure_μ_exp[μ[i]]
             μ_M_exp[i] = substitute(μ_M_exp[i], μ_central)
-            μ_M_exp[i] = simplify(μ_M_exp[i])
+            μ_M_exp[i] = mc_simplify(μ_M_exp[i])
         end
 
         closure = OrderedDict()
@@ -161,8 +161,8 @@ function conditional_derivative_matching(sys::MomentEquations,
         raw_to_central_exp = raw_to_central_moments(N, sys.q_order, μ_M_exp, bernoulli=true)
         raw_to_central = raw_to_central_moments(N, sys.q_order, μ_M, bernoulli=true)
         for i in sys.iter_q
-            closure_exp[sys.M[i]] = simplify(raw_to_central_exp[i])
-            closure[sys.M[i]] = simplify(raw_to_central[i])
+            closure_exp[sys.M[i]] = mc_simplify(raw_to_central_exp[i])
+            closure[sys.M[i]] = mc_simplify(raw_to_central[i])
         end
 
 

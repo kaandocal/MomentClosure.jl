@@ -77,9 +77,9 @@ function derivative_matching(sys::MomentEquations, binary_vars::Array{Int,1}=Int
             γ = A\b
 
             closed_μ[m] = prod([closed_μ[iter_k[i]]^Int(γ[i]) for i in 1:length_k])
-            closed_μ[m] = simplify(closed_μ[m])
+            closed_μ[m] = mc_simplify(closed_μ[m])
             closure[μ_symbolic[m]] = prod([μ[iter_k[i]]^Int(γ[i]) for i in 1:length_k])
-            closure[μ_symbolic[m]] = simplify(closure[μ_symbolic[m]])
+            closure[μ_symbolic[m]] = mc_simplify(closure[μ_symbolic[m]])
 
             perms = collect(multiset_permutations(m, length(m)))[2:end]
 
@@ -109,8 +109,8 @@ function derivative_matching(sys::MomentEquations, binary_vars::Array{Int,1}=Int
         closure_M = OrderedDict()
         for i in sys.iter_q
             closure_exp[sys.M[i]] = raw_to_central[i]
-            expr = simplify(central_to_raw[i]-sys.M[i])
-            closure_M[sys.M[i]] = simplify(closure[μ_symbolic[i]]-expr)
+            expr = mc_simplify(central_to_raw[i]-sys.M[i])
+            closure_M[sys.M[i]] = mc_simplify(closure[μ_symbolic[i]]-expr)
         end
         closure = closure_M
     else

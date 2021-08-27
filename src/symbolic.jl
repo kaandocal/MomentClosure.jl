@@ -2,8 +2,6 @@ import SymbolicUtils: <ₑ
 <ₑ(a::SymbolicUtils.Symbolic, b::Num) = false
 <ₑ(a::Num, b::SymbolicUtils.Symbolic) = true
 
-Base.isequal(a::Symbolics.Add, b::Symbolics.Add) = isequal(a.coeff, b.coeff) && isequal(a.dict, b.dict)
-
 function gen_iter(n::Int, d::Int)
     # based on https://twitter.com/evalparse/status/1107964924024635392
     iter = NTuple{n,Int}[]
@@ -47,15 +45,16 @@ function define_μ(N::Int, order::Int, iter=construct_iter_all(N, order))
 
     @parameters t
 
-    μs = OrderedDict()
+    μs = OrderedDict{NTuple{N,Int},Any}()
     for (i, idx) in enumerate(iter)
         if sum(idx) == 0
             μs[idx] = 1
         else
             sym_name = Symbol('μ', join(map_subscripts(indices[i])))
             sym_raw = Sym{FnType{Tuple{Any}, Real}}(sym_name)
-            sym = SymbolicUtils.setmetadata(sym_raw, Symbolics.VariableSource, (:momentclosure, sym_name))
-            μs[idx] = Term{Real}(sym, [t])
+            term_raw = Term{Real}(sym_raw, [t])
+            μs[idx] = SymbolicUtils.setmetadata(term_raw, Symbolics.VariableSource, 
+                                                (:momentclosure, sym_name))
         end
     end
 
@@ -68,7 +67,7 @@ function define_M(N::Int, order::Int, iter=construct_iter_all(N, order))
 
     @parameters t
 
-    Ms = OrderedDict()
+    Ms = OrderedDict{NTuple{N,Int},Any}()
     for (i, idx) in enumerate(iter)
         if sum(idx) == 0
             Ms[idx] = 1
@@ -77,9 +76,9 @@ function define_M(N::Int, order::Int, iter=construct_iter_all(N, order))
         else
             sym_name = Symbol('M', join(map_subscripts(indices[i])))
             sym_raw = Sym{FnType{Tuple{Any}, Real}}(sym_name)
-            sym = SymbolicUtils.setmetadata(sym_raw, Symbolics.VariableSource, 
-                                            (:momentclosure, sym_name))
-            Ms[idx] = Term{Real}(sym, [t])
+            term_raw = Term{Real}(sym_raw, [t])
+            Ms[idx] = SymbolicUtils.setmetadata(term_raw, Symbolics.VariableSource, 
+                                                (:momentclosure, sym_name))
         end
     end
 
@@ -120,7 +119,7 @@ end
     then the function `polynomial_propensities` will throw an error.
 =#
 
-isconstant(expr::Number, vars, iv) = false
+isconstant(expr::Number, vars, iv) = true
 
 function isconstant(expr::Symbolic, vars, iv)
     # Check that the given expression does NOT depend on the given variables `vars` (expr is constant wrt. vars)
@@ -140,7 +139,24 @@ function isconstant(expr::Symbolic, vars, iv)
     end
 end
 
-isvar(x::Symbolic, vars) = any(var -> isequal(x, var), vars)
+#polyescapeisequal(x, y) = isequal(x, y)
+#polyescapeisequal(x::PolyForm, y) = _polyescapeisequal(x, y)
+#polyescapeisequal(x::PolyForm, y::PolyForm) = _polyescapeisequal(x,y)
+#polyescapeisequal(y::PolyForm) = _polyescapeisequal(x,y)
+
+#function _polyescapeisequal(x, y)
+#	@show x y
+#	isequal(x, y)
+#end
+
+varequal(x, y) = isequal(x,y)#polyescapeisequal(x, y)
+
+#function varequal(x::Term, y::Term)
+#	x.f == y.f || return false
+#	all(varequal.(arguments(x), arguments(y)))
+#end
+
+#isvar(x::Symbolic, vars) = any(var -> varequal(x, var), vars)
 
 function extract_pwr!(powers, expr::Symbolic, smap, vars)
     args = arguments(expr)
@@ -189,7 +205,7 @@ function polynomial_propensities(a::Vector, rn::Union{ReactionSystem, ReactionSy
 
     for (rind, expr) in enumerate(a)
 
-        expr = expand(expr)
+        expr = mc_expand(expr)
 
         if isconstant(expr, vars, iv)
 
@@ -199,7 +215,7 @@ function polynomial_propensities(a::Vector, rn::Union{ReactionSystem, ReactionSy
         elseif isvar(expr, vars)
 
             push!(all_factors[rind], 1)
-            push!(all_powers[rind], map(v -> isequal(expr, v), vars))
+            push!(all_powers[rind], map(v -> varequal(expr, v), vars))
 
         elseif operation(expr) == ^ #Symbolics.Pow
 

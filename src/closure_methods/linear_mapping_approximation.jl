@@ -63,13 +63,13 @@ function linear_mapping_approximation(rn_nonlinear::T, rn_linear::T, binary_vars
       for (coeff, factors, powers, binary_ind) in zip(coeffs, term_factors, term_powers, which_binary)
             sub_params[coeff] = sum(factor*μ[Tuple(power)] for (factor, power) in zip(factors, powers))
             sub_params[coeff] /= μ[sys.iter_1[binary_ind]]
-            sub_params[coeff] = simplify(sub_params[coeff])
+            sub_params[coeff] = mc_simplify(sub_params[coeff])
       end
 
       LMA_eqs = Equation[]
       for eq in sys.odes.eqs
             rhs = substitute(eq.rhs, sub_params)
-            rhs = expand(rhs)
+            rhs = mc_expand(rhs)
             push!(LMA_eqs, Equation(eq.lhs, rhs))
       end
 

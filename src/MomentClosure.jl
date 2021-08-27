@@ -35,6 +35,8 @@ export generate_central_moment_eqs, generate_raw_moment_eqs, bernoulli_moment_eq
 # needed for ReactionSystemMod definition
 export @parameters, @variables
 
+include("simplify.jl")
+
 include("reaction_systems.jl")
 include("moment_equations.jl")
 include("symbolic.jl")
