@@ -1,5 +1,5 @@
 using MomentClosure
-using MomentClosure: define_M, define_μ
+using MomentClosure: Moment, define_M, define_μ
 using Test
 using Catalyst
 
@@ -20,8 +20,8 @@ binary_vars = [1]
 
 rn = ReactionSystemMod(t, vars, ps, as, S)
 
-μ = define_μ(2,4)
-M = define_M(2,4)
+μ = define_μ(Moment{2},4)
+M = define_M(Moment{2},4)
 sys = generate_central_moment_eqs(rn, 2)
 
 closed_eqs = moment_closure(sys, "zero", binary_vars)

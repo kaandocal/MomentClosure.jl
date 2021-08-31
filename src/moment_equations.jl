@@ -16,21 +16,21 @@ struct RawMomentEquations{N} <: MomentEquations{N}
     consisting of the time-evolution equations of raw moments."""
     odes::ODESystem
     """Symbolic variables defining the raw moments."""
-    μ::Dict
+    μ::Dict{Moment{N}, Any}
     """Order of moment equations."""
     m_order::Int
     """Expansion order."""
     q_order::Int
     """Vector of all index combinations up to `q_order`."""
-    iter_all::Vector{NTuple{N,Int}}
-    iter_m::Vector{NTuple{N,Int}}
-    iter_q::Vector{NTuple{N,Int}}
+    iter_all::Vector{Moment{N}}
+    iter_m::Vector{Moment{N}}
+    iter_q::Vector{Moment{N}}
 end
 
 function RawMomentEquations{N}(odes, μ, m_order, q_order, iter_all, 
-                               iter_m=get_iter_m(iter_all, N, m_order)) where {N}
+                               iter_m=get_iter_m(iter_all, m_order)) where {N}
     RawMomentEquations{N}(odes, μ, m_order, q_order, iter_all, iter_m,
-                          get_iter_q(iter_all, N, m_order, q_order))
+                          get_iter_q(iter_all, m_order, q_order))
 end
 
 """
@@ -47,23 +47,23 @@ struct CentralMomentEquations{N} <: MomentEquations{N}
     consisting of the time-evolution equations of central moments."""
     odes::ODESystem
     """Symbolic variables defining the means."""
-    μ::Dict
+    μ::Dict{Moment{N}, Any}
     """Symbolic variables defining the central moments."""
-    M::Dict
+    M::Dict{Moment{N}, Any}
     """Order of moment equations."""
     m_order::Int
     """Expansion order."""
     q_order::Int
     """Vector of all index combinations up to `q_order`."""
-    iter_all::Vector{NTuple{N,Int}}
-    iter_m::Vector{NTuple{N,Int}}
-    iter_q::Vector{NTuple{N,Int}}
+    iter_all::Vector{Moment{N}}
+    iter_m::Vector{Moment{N}}
+    iter_q::Vector{Moment{N}}
 end
 
 function CentralMomentEquations{N}(odes, μ, M, m_order, q_order, iter_all,
-                                   iter_m=get_iter_m(iter_all, N, m_order)) where {N}
+                                   iter_m=get_iter_m(iter_all, m_order)) where {N}
     CentralMomentEquations{N}(odes, μ, M, m_order, q_order, iter_all, iter_m,
-                              get_iter_q(iter_all, N, m_order, q_order))
+                              get_iter_q(iter_all, m_order, q_order))
 end
 
 """
@@ -96,8 +96,8 @@ end
 get_iter_all(eqs::Union{RawMomentEquations,CentralMomentEquations}) = eqs.iter_all
 
 # Iterate through all monomials of degree 1
-function get_iter_1(eqs::Union{RawMomentEquations{N},CentralMomentEquations{N}}) where {N} 
-    get_iter_1(get_iter_all(eqs), N)
+function get_iter_1(eqs::Union{RawMomentEquations,CentralMomentEquations})
+    get_iter_1(get_iter_all(eqs))
 end
 
 # Iterate through all monomials of degree 1 < deg <= m
@@ -114,10 +114,17 @@ function get_iter_M(eqs::Union{RawMomentEquations,CentralMomentEquations})
     vcat(get_iter_m(eqs), get_iter_q(eqs))
 end
 
-get_iter_1(iter_all, N) = @view iter_all[2:N+1]
-get_iter_m(iter_all, N, m) = @view iter_all[N+2:sum(d->binomial(N-1+d,N-1), 0:m)]
-get_iter_q(iter_all, N, m, q) = @view iter_all[sum(d->binomial(N-1+d,N-1), 0:m)+1:end]
-get_iter_M(iter_all, N) = @view iter_all[N+2:end]
+get_iter_1(iter_all::AbstractVector{Moment{N}}) where {N} = @view iter_all[2:N+1]
+
+function get_iter_m(iter_all::AbstractVector{Moment{N}}, m) where {N}
+    @view iter_all[N+2:sum(d->binomial(N-1+d,N-1), 0:m)]
+end
+
+function get_iter_q(iter_all::AbstractVector{Moment{N}}, m, q) where {N}
+    @view iter_all[sum(d->binomial(N-1+d,N-1), 0:m)+1:end]
+end
+
+get_iter_M(iter_all::AbstractVector{Moment{N}}) where {N} = @view iter_all[N+2:end]
 
 get_iter_all(eqs::ClosedMomentEquations) = get_iter_all(eqs.open_eqs)
 get_iter_1(eqs::ClosedMomentEquations) = get_iter_1(eqs.open_eqs)

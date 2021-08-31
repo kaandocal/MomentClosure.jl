@@ -5,13 +5,11 @@
 struct VariableSource end
 using Combinatorics
 
-const MomentIdx{N} = NTuple{N,Int}
-
-function construct_iter_all(N::Int, order::Int)
+function construct_iter_all(::Type{Moment{N}}, order::Int) where N
     #Construct an ordered iterator going over all moments
     # sequentially in terms of order
 
-    iters = NTuple{N,Int}[]
+    iters = Moment{N}[]
     for d in 0:order
         x = map(Tuple, multiexponents(N, d))
         append!(iters, x)
@@ -30,12 +28,13 @@ flatten_rule_mod = @rule(~x::isnotflat(+) => flatten_term(+, ~x))
 flatten_mod = Fixpoint(PassThrough(flatten_rule_mod))
 expand_expr = Fixpoint(PassThrough(Chain([expand_mod, flatten_mod])))
 
-function define_μ(N::Int, order::Int, iter=construct_iter_all(N, order))
+function define_μ(::Type{Moment{N}}, order::Int, 
+                  iter=construct_iter_all(Moment{N}, order)) where {N}
     indices = map(trim_key, iter)
 
     @parameters t
 
-    μs = OrderedDict{NTuple{N,Int},Any}()
+    μs = OrderedDict{Moment{N},Any}()
     for (i, idx) in enumerate(iter)
         if sum(idx) == 0
             μs[idx] = 1
@@ -52,12 +51,13 @@ function define_μ(N::Int, order::Int, iter=construct_iter_all(N, order))
 end
 
 
-function define_M(N::Int, order::Int, iter=construct_iter_all(N, order))
+function define_M(::Type{Moment{N}}, order::Int, 
+                  iter=construct_iter_all(Moment{N}, order)) where N
     indices = map(trim_key, iter)
 
     @parameters t
 
-    Ms = OrderedDict{NTuple{N,Int},Any}()
+    Ms = OrderedDict{Moment{N},Any}()
     for (i, idx) in enumerate(iter)
         if sum(idx) == 0
             Ms[idx] = 1
@@ -76,15 +76,14 @@ function define_M(N::Int, order::Int, iter=construct_iter_all(N, order))
 end
 
 
-function extract_variables(eqs::Array{Equation, 1}, N::Int, q_order::Int,
-                           iter_all = construct_iter_all(N, q_order))
-    #iter_μ = filter(x -> sum(x) > 0, iters)
-    iter_M = get_iter_M(iter_all, N)
+function extract_variables(eqs::AbstractVector{Equation}, ::Type{Moment{N}}, q_order::Int,
+                           iter_all = construct_iter_all(Moment{N}, q_order)) where {N}
+    iter_M = get_iter_M(iter_all)
 
     #### REPLACE BY iter_μ?
     
-    μs = values(define_μ(N, q_order, iter_all))
-    Ms = values(define_M(N, q_order, iter_M))
+    μs = values(define_μ(Moment{N}, q_order, iter_all))
+    Ms = values(define_M(Moment{N}, q_order, iter_M))
     vars = vcat(μs..., Ms...)
     # extract variables from rhs of each equation
     eq_vars = unique(vcat(get_variables.(eqs)...))

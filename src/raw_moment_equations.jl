@@ -21,8 +21,13 @@ Notes:
 """
 function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_order::Int;
                                  combinatoric_ratelaw=true, smap=speciesmap(rn))
+    generate_raw_moment_eqs(Moment{numspecies(rn)}, rn, m_order; 
+                            combinatoric_ratelaw=combinatoric_ratelaw, smap=smap)
+end
 
-    N = numspecies(rn)
+function generate_raw_moment_eqs(::Type{Moment{N}},
+                                 rn::Union{ReactionSystem,ReactionSystemMod}, m_order::Int;
+                                 combinatoric_ratelaw=true, smap=speciesmap(rn)) where {N}
     S = get_S_mat(rn; smap)
     a = propensities(rn; combinatoric_ratelaw)
 
@@ -31,13 +36,13 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
     q_order = poly_order + m_order - 1
 
     # iterator over all moments from lowest to highest moment order
-    iter_all = construct_iter_all(N, q_order)
+    iter_all = construct_iter_all(Moment{N}, q_order)
     # iterator over the first order moments
-    iter_1 = get_iter_1(iter_all, N)
+    iter_1 = get_iter_1(iter_all)
     # iterator over raw moments up to order m
-    iter_m = get_iter_m(iter_all, N, m_order)
+    iter_m = get_iter_m(iter_all, m_order)
 
-    μ = define_μ(N, q_order, iter_all)
+    μ = define_μ(Moment{N}, q_order, iter_all)
 
     iv = get_iv(rn)
     D = Differential(iv)
@@ -47,7 +52,7 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
         push!(eqs, D(μ[i]) ~ get_dμ(i, iter_all, S, μ, term_factors, term_powers))
     end
 
-    vars = extract_variables(eqs, N, q_order, iter_all)
+    vars = extract_variables(eqs, Moment{N}, q_order, iter_all)
     odes = ODESystem(eqs, iv, vars, get_ps(rn); 
                      name=Symbol(nameof(rn),"_raw_moment_eqs_",m_order))
 
@@ -61,7 +66,7 @@ function generate_raw_moment_eqs(rn::Union{ReactionSystem,ReactionSystemMod}, m_
     )
 end
 
-function get_dμ(i::NTuple{N,Int}, iter_all, S, μ, term_factors, term_powers) where {N}
+function get_dμ(i::Moment{N}, iter_all, S, μ, term_factors, term_powers) where {N}
     ret = 0
     for r = 1:size(S, 2)
         iter_j = filter(x -> all(x .<= i) && sum(x) <= sum(i) - 1, iter_all)

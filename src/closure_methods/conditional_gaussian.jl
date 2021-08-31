@@ -7,9 +7,9 @@ function conditional_gaussian_closure(sys::MomentEquations{N},
 
     sys = bernoulli_moment_eqs(sys, binary_vars)
     # define symbolic raw moment expressions
-    μ = sys isa CentralMomentEquations ? define_μ(N, sys.q_order) : copy(sys.μ)
+    μ = sys isa CentralMomentEquations ? define_μ(Moment{N}, sys.q_order) : copy(sys.μ)
     # express cumulants in terms of raw moments
-    K = cumulants_to_raw_moments(N, sys.q_order)
+    K = cumulants_to_raw_moments(Moment{N}, sys.q_order)
 
     # closure of higher order raw moments without explicit form of truncated moments
     # e.g. μ₁₄ would still be a function of μ₁₃ even though μ₁₃ is also truncated
@@ -107,38 +107,7 @@ function conditional_gaussian_closure(sys::MomentEquations{N},
     end
 
     if sys isa CentralMomentEquations
-
-        central_to_raw = central_to_raw_moments(N, sys.q_order)
-        μ_central = Dict()
-        for iter in get_iter_M(sys)
-            μ_central[μ[iter]] = central_to_raw[iter]
-        end
-
-        μ_M_exp = define_μ(N, 1)
-        for i in get_iter_m(sys)
-            μ_M_exp[i] = μ_central[μ[i]]
-        end
-        μ_M = copy(μ_M_exp)
-        for i in get_iter_q(sys)
-            μ_M[i] = closure_μ[μ[i]]
-            μ_M[i] = substitute(μ_M[i], μ_central)
-            μ_M[i] = mc_simplify(μ_M[i], expand=true)
-            μ_M_exp[i] = closure_μ_exp[μ[i]]
-            μ_M_exp[i] = substitute(μ_M_exp[i], μ_central)
-            μ_M_exp[i] = mc_simplify(μ_M_exp[i], expand=true)
-        end
-        closure = OrderedDict()
-        closure_exp = OrderedDict()
-        # construct the corresponding truncated expressions of higher order
-        # central moments from the obtained raw moment expressions
-        raw_to_central_exp = raw_to_central_moments(N, sys.q_order, get_iter_all(sys), μ_M_exp, 
-                                                    bernoulli=true)
-        raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys), μ_M, bernoulli=true)
-        for i in get_iter_q(sys)
-            closure_exp[sys.M[i]] = mc_simplify(raw_to_central_exp[i], expand=true)
-            closure[sys.M[i]] = mc_simplify(raw_to_central[i], expand=true)
-        end
-
+        closure_exp, closure = convert_μ_to_M(sys, closure_μ_exp, closure_μ; expand=true)
     else
         closure_exp = closure_μ_exp
         closure = closure_μ

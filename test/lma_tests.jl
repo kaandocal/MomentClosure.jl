@@ -1,5 +1,5 @@
 using MomentClosure
-using MomentClosure: define_μ
+using MomentClosure: Moment, define_μ
 using ModelingToolkit: value
 using Catalyst
 using Test
@@ -27,7 +27,7 @@ end σ_b_LMA σ_u ρ_b ρ_u
 binary_vars = [speciesmap(rn_nonlinear)[g]]
 LMA_eqs, _ = linear_mapping_approximation(rn_nonlinear, rn_linear, binary_vars, combinatoric_ratelaw=false)
 
-μ = define_μ(2,3)
+μ = define_μ(Moment{2},3)
 expr1 = LMA_eqs.odes.eqs[1].rhs
 expr2 = σ_u - σ_b*μ[1,1] - σ_u*μ[1,0]
 @test isequal(expr1, value.(expr2))

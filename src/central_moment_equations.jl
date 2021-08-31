@@ -29,8 +29,15 @@ Notes:
 function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod},
                                      m_order::Int, q_order::Int=0;
                                      combinatoric_ratelaw=true, smap=speciesmap(rn))
+    generate_central_moment_eqs(Moment{numspecies(rn)}, rn, m_order, q_order;
+                                combinatoric_ratelaw=combinatoric_ratelaw,
+                                smap=smap)
+end
 
-    N = numspecies(rn) # no. of molecular species in the network
+function generate_central_moment_eqs(::Type{Moment{N}},
+                                         rn::Union{ReactionSystem, ReactionSystemMod},
+                                         m_order::Int, q_order::Int=0;
+                                         combinatoric_ratelaw=true, smap=speciesmap(rn)) where {N}
     R = numreactions(rn) # no. of reactions in the network
 
     # propensity functions of all reactions in the network
@@ -51,17 +58,17 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
     S = get_S_mat(rn; smap)
     
     # iterator over all moments from lowest to highest moment order
-    iter_all = construct_iter_all(N, q_order)
+    iter_all = construct_iter_all(Moment{N}, q_order)
     # iterator over the first order moments
-    iter_1 = get_iter_1(iter_all, N)
+    iter_1 = get_iter_1(iter_all)
     # iterator over raw moments up to order m
-    iter_m = get_iter_m(iter_all, N, m_order)
+    iter_m = get_iter_m(iter_all, m_order)
 
     #= Define the first order raw moments μ and
        central moments Mᵢ as symbolic variables
        using the functionality of ModelingToolkit.jl =#
-    μ = define_μ(N, 1, iter_1)
-    M = define_M(N, q_order, iter_all)
+    μ = define_μ(Moment{N}, 1, iter_1)
+    M = define_M(Moment{N}, q_order, iter_all)
 
     #= Obtain all derivatives of the propensity functions with respect
     to all molecular species up to order defined by q_order.
@@ -91,7 +98,7 @@ function generate_central_moment_eqs(rn::Union{ReactionSystem, ReactionSystemMod
         push!(eqs, D(M[i]) ~ dM[i])
     end
 
-    vars = extract_variables(eqs, N, q_order, iter_all)
+    vars = extract_variables(eqs, Moment{N}, q_order, iter_all)
     odes = ODESystem(eqs, iv, vars, get_ps(rn);
                      name=Symbol(nameof(rn),"_central_moment_eqs_m",m_order,"_q",q_order))
 
@@ -150,7 +157,7 @@ end
 function get_dM(Da, du, iter_all, iter_m, M, S, q_order)
     ret = Dict()
 
-    iter_1 = get_iter_1(iter_all, length(du))
+    iter_1 = get_iter_1(iter_all)
 
     for i in iter_m
         dMi = 0

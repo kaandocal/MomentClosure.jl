@@ -28,12 +28,12 @@ function gamma_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}
 
     if sys isa CentralMomentEquations
         M = copy(sys.M)
-        μ = central_to_raw_moments(N, sys.m_order)
-        μ_symbolic = define_μ(N, sys.q_order)
+        μ = central_to_raw_moments(Moment{N}, sys.m_order)
+        μ_symbolic = define_μ(Moment{N}, sys.q_order)
     else
         # consider covariances explicitly as M (without converting to raw moments)
         # and converting at the end leads to much more tractable expressions
-        M = define_M(N, 2)
+        M = define_M(Moment{N}, 2)
         μ = copy(sys.μ)
         μ_symbolic = copy(μ)
     end
@@ -84,7 +84,6 @@ function gamma_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}
     end
 
     # construct the raw moments that follow the multivariate gamma distribution
-    iters = Vector(undef, N)
 
     # TupleTools.sort comes in handy here
     unique_iter_q = unique(sort(i) for i in get_iter_q(sys))
@@ -94,6 +93,7 @@ function gamma_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}
     # line below reproduces Lakatos et al. (2015) results - stronger assumptions
     #unique_iter_q = unique(sort(i) for i in vcat(sys.iter_m, sys.iter_q))
 
+    iters = Vector(undef, N)
     for iter in unique_iter_q
 
         # construct iterator through the product of sums in the Eq. for raw moments
@@ -154,8 +154,8 @@ function gamma_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}
     # construct the corresponding truncated expressions of higher order
     # central moments from the obtained gamma raw moment expressions
     if sys isa CentralMomentEquations
-        raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys), μ, sys.M)
-        central_to_raw = central_to_raw_moments(N, sys.q_order, get_iter_all(sys), sys.μ, sys.M)
+        raw_to_central = raw_to_central_moments(Moment{N}, sys.q_order, get_iter_all(sys), μ, sys.M)
+        central_to_raw = central_to_raw_moments(Moment{N}, sys.q_order, get_iter_all(sys), sys.μ, sys.M)
         closure_M = OrderedDict()
         for i in get_iter_q(sys)
             closure_exp[M[i]] = raw_to_central[i]
@@ -163,7 +163,7 @@ function gamma_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}
         end
         closure = closure_M
     else
-        raw_to_central = raw_to_central_moments(N, 2)
+        raw_to_central = raw_to_central_moments(Moment{N}, 2)
         M_to_μ = [M[i] => raw_to_central[i] for i in filter(x -> sum(x)==2, get_iter_all(sys))]
 
         # variance of bernoulli variable is expressed in terms of its mean
@@ -213,7 +213,7 @@ function gamma_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{Int}
             delete!(closure, moments[i])
         end
 
-        vars = extract_variables(closed_eqs, N, sys.q_order)
+        vars = extract_variables(closed_eqs, Moment{N}, sys.q_order)
         odes = ODESystem(closed_eqs, get_iv(sys.odes), vars, sys.odes.ps;
                          name=Symbol(nameof(sys),"_gamma_closure"))
 

@@ -38,7 +38,7 @@ function get_raw_moments(sol::EnsembleSolution, order::Int; naive::Bool=true, b:
     no_t_pts = length(sol.u[1])
     N = length(sol.u[1].u[1])
 
-    iter_all = construct_iter_all(N, order)
+    iter_all = construct_iter_all(Moment{N}, order)
     iter_order = [filter(x -> sum(x) == m, iter_all) for m in 1:order]
     iter_μ = vcat(iter_order...)
 
@@ -83,7 +83,7 @@ function get_central_moments(sol::EnsembleSolution, order::Int; naive::Bool=true
     no_t_pts = length(sol.u[1])
     N = length(sol.u[1].u[1])
 
-    iter_all = construct_iter_all(N, order)
+    iter_all = construct_iter_all(Moment{N}, order)
     iter_order = [filter(x-> sum(x) == m, iter_all) for m in 1:order]
     iter_M = filter(x -> sum(x) > 1, iter_all)
 
@@ -103,7 +103,7 @@ function get_central_moments(sol::EnsembleSolution, order::Int; naive::Bool=true
                 μ[iter] = data[keys[iter]...]
             end
         end
-        M_temp = raw_to_central_moments(N, order, iter_all, μ)
+        M_temp = raw_to_central_moments(Moment{N}, order, iter_all, μ)
         for iter in iter_M
             M[iter][t_pt] = M_temp[iter]
         end
@@ -126,7 +126,7 @@ function get_cumulants(sol::EnsembleSolution, order::Int; naive::Bool=true, b::I
     no_t_pts = length(sol.u[1])
     N = length(sol.u[1].u[1])
 
-    iter_all = construct_iter_all(N, order)
+    iter_all = construct_iter_all(Moment{N}, order)
     iter_order = [filter(x-> sum(x) == m, iter_all) for m in 1:order]
     iter_κ = vcat(iter_order...)
 
@@ -198,7 +198,7 @@ function get_moments_FSP(sol::ODESolution, order::Int, moment_type::String)
     N = length(state_space)
     no_t_pts = length(sol.u)
 
-    iter_moments = construct_iter_all(N, order)[2:end]
+    iter_moments = construct_iter_all(Moment{N}, order)[2:end]
     moments = Dict([iter => Array{Float64}(undef, no_t_pts) for iter in iter_moments])
 
     iter_state = Iterators.product((0:i-1 for i in state_space)...)
@@ -211,7 +211,7 @@ function get_moments_FSP(sol::ODESolution, order::Int, moment_type::String)
             end
         end
     else
-        μ = Dict{NTuple{N,Int}, Float64}()
+        μ = Dict{Moment{N}, Float64}()
         μ[Tuple(zeros(Int, N))] = 1.
 
         for t_pt in 1:no_t_pts
@@ -221,9 +221,9 @@ function get_moments_FSP(sol::ODESolution, order::Int, moment_type::String)
             end
 
             if moment_type == "central"
-                moment_temp = MomentClosure.raw_to_central_moments(N, order, μ)
+                moment_temp = MomentClosure.raw_to_central_moments(Moment{N}, order, μ)
             else
-                moment_temp = MomentClosure.cumulants_to_raw_moments(N, order, μ)
+                moment_temp = MomentClosure.cumulants_to_raw_moments(Moment{N}, order, μ)
             end
 
             for iter in iter_moments

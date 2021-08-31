@@ -22,7 +22,7 @@ function zero_closure(sys::RawMomentEquations{N}, binary_vars::AbstractVector{In
         sys = bernoulli_moment_eqs(sys, binary_vars)
     end
 
-    raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys))
+    raw_to_central = raw_to_central_moments(Moment{N}, sys.q_order, get_iter_all(sys))
 
     unique_iter_q = unique(sort(i) for i in get_iter_q(sys))
     sub = Dict()

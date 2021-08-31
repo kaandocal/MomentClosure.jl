@@ -11,8 +11,8 @@ function log_normal_closure(sys::MomentEquations{N}, binary_vars::AbstractVector
 
     if sys isa CentralMomentEquations
         M = sys.M
-        μ = central_to_raw_moments(N, sys.m_order, get_iter_all(sys))
-        μ_symbolic = define_μ(N, sys.q_order)
+        μ = central_to_raw_moments(Moment{N}, sys.m_order, get_iter_all(sys))
+        μ_symbolic = define_μ(Moment{N}, sys.q_order)
     else
         μ = copy(sys.μ)
         μ_symbolic = copy(μ)
@@ -65,10 +65,10 @@ function log_normal_closure(sys::MomentEquations{N}, binary_vars::AbstractVector
     if sys isa CentralMomentEquations
         # construct the corresponding truncated expressions of higher order
         # central moments from the obtained log-normal raw moment expressions
-        raw_to_central = raw_to_central_moments(N, sys.q_order, 
+        raw_to_central = raw_to_central_moments(Moment{N}, sys.q_order, 
                                                 get_iter_all(sys),
                                                 bernoulli=isbernoulli)
-        central_to_raw = central_to_raw_moments(N, sys.q_order, get_iter_all(sys),
+        central_to_raw = central_to_raw_moments(Moment{N}, sys.q_order, get_iter_all(sys),
                                                 sys.μ, sys.M)
         closure_M = OrderedDict()
         for i in get_iter_q(sys)

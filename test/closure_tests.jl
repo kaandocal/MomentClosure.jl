@@ -1,5 +1,5 @@
 using MomentClosure
-using MomentClosure: define_M, define_μ
+using MomentClosure: Moment, define_M, define_μ
 using ModelingToolkit: value
 using SymbolicUtils: expand
 using Test
@@ -13,8 +13,8 @@ S_mat = [ 1 -1  1 -1;
 a = [c₁*X*Y*(X-1)/Ω^2, c₂*X, c₃*Ω, c₄*X]
 rn = ReactionSystemMod(t, [X, Y], [c₁, c₂, c₃, c₄, Ω], a, S_mat)
 
-μ = define_μ(2,4)
-M = define_M(2,4)
+μ = define_μ(Moment{2},4)
+M = define_M(Moment{2},4)
 sys = generate_central_moment_eqs(rn, 2, 4)
 expr1 = sys.odes.eqs[1].rhs
 

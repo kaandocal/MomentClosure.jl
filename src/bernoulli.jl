@@ -1,4 +1,4 @@
-function bernoulli_truncate(powers::NTuple{N,Int}, binary_vars)::NTuple{N,Int} where {N}
+function bernoulli_truncate(powers::Moment{N}, binary_vars)::Moment{N} where {N}
     iter_temp = collect(powers) # need to transform into array as Tuple is immutable
     for ind in binary_vars
         if powers[ind] > 1
@@ -58,14 +58,14 @@ function bernoulli_reduce(sys::CentralMomentEquations{N}, binary_vars::AbstractV
 
     redundant_eqs = get_redundant_eqs(sys, binary_vars)
 
-    μ = define_μ(N, sys.q_order, get_iter_all(sys))
+    μ = define_μ(Moment{N}, sys.q_order, get_iter_all(sys))
     μ_redundant_sub = [μ[key] => μ[val] for (key, val) in redundant_iter_sub]
 
     clean_iter = setdiff(get_iter_M(sys), redundant_iter)
-    central_to_raw = central_to_raw_moments(N, sys.q_order, get_iter_all(sys))
+    central_to_raw = central_to_raw_moments(Moment{N}, sys.q_order, get_iter_all(sys))
     μ_clean_sub = Dict(μ[iter] => central_to_raw[iter] for iter in clean_iter)
 
-    raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys))
+    raw_to_central = raw_to_central_moments(Moment{N}, sys.q_order, get_iter_all(sys))
     iter_sub = Dict()
     for iter in redundant_iter
         M_temp = raw_to_central[iter]
@@ -114,7 +114,7 @@ function bernoulli_moment_eqs(sys::Union{RawMomentEquations{N}, CentralMomentEqu
     iv = get_iv(sys.odes)
     ps = get_ps(sys.odes)
 
-    vars = extract_variables(clean_eqs, N, sys.q_order, iter_all)
+    vars = extract_variables(clean_eqs, Moment{N}, sys.q_order, iter_all)
     odes = ODESystem(clean_eqs, iv, vars, ps; name=Symbol(nameof(sys.odes),"_bernoulli"))
 
     if sys isa RawMomentEquations

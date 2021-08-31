@@ -9,10 +9,10 @@ function poisson_closure(sys::MomentEquations{N}, binary_vars::AbstractVector{In
     # build symbolic expressions of cumulants up to q_order in terms of central/raw moments
     if sys isa CentralMomentEquations
         moments = copy(sys.M)
-        K = cumulants_to_central_moments(N, sys.q_order)
+        K = cumulants_to_central_moments(Moment{N}, sys.q_order)
     else
         moments = copy(sys.μ)
-        K = cumulants_to_raw_moments(N, sys.q_order)
+        K = cumulants_to_raw_moments(Moment{N}, sys.q_order)
     end
 
     iter_qs = get_iter_m(sys)

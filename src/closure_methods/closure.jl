@@ -51,7 +51,7 @@ The supported `closure` options are:
   will be used to remove the redundant moment equations and simplify the expressions, which can
   significantly improve numerical stability.
 """
-function moment_closure(sys::MomentEquations, closure::String, binary_vars::Array{Int,1}=Int[])
+function moment_closure(sys::MomentEquations, closure::String, binary_vars::AbstractVector{Int}=Int[])
 
     if closure == "zero"
         zero_closure(sys, binary_vars)

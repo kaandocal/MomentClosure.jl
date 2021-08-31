@@ -42,6 +42,8 @@ export @parameters, @variables
 
 #include("simplify.jl")
 
+const Moment{N} = NTuple{N,Int}
+
 include("reaction_systems.jl")
 include("moment_equations.jl")
 include("symbolic.jl")

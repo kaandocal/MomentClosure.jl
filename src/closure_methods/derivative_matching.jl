@@ -13,13 +13,13 @@ function derivative_matching(sys::MomentEquations{N}, binary_vars::AbstractVecto
 
     # construct the raw moments up to mth order from the solved-for central moments
     if sys isa CentralMomentEquations
-        closed_μ = central_to_raw_moments(N, sys.m_order)
-        μ = central_to_raw_moments(N, sys.q_order, get_iter_all(sys))
+        closed_μ = central_to_raw_moments(Moment{N}, sys.m_order)
+        μ = central_to_raw_moments(Moment{N}, sys.q_order, get_iter_all(sys))
     else
         μ = sys.μ
         closed_μ = copy(μ)
     end
-    μ_symbolic = define_μ(N, sys.q_order)
+    μ_symbolic = define_μ(Moment{N}, sys.q_order)
 
     # note that derivative matching is originally constructed by truncating at order of m_order+1
     # so if q_order > m_order + 1, we have to consider m_order+1, m_order+2, and so on in sequence
@@ -91,9 +91,9 @@ function derivative_matching(sys::MomentEquations{N}, binary_vars::AbstractVecto
     if sys isa CentralMomentEquations
         # construct the corresponding truncated expressions of higher order
         # central moments from the obtained raw moment expressions
-        raw_to_central = raw_to_central_moments(N, sys.q_order, get_iter_all(sys),
+        raw_to_central = raw_to_central_moments(Moment{N}, sys.q_order, get_iter_all(sys),
                                                 closed_μ, bernoulli=isbernoulli)
-        central_to_raw = central_to_raw_moments(N, sys.q_order, get_iter_all(sys),
+        central_to_raw = central_to_raw_moments(Moment{N}, sys.q_order, get_iter_all(sys),
                                                 sys.μ, sys.M)
         closure_M = OrderedDict()
         for i in get_iter_q(sys)

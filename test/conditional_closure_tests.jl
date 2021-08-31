@@ -1,5 +1,5 @@
 using MomentClosure
-using MomentClosure: define_M, define_μ
+using MomentClosure: Moment, define_M, define_μ
 using ModelingToolkit: value
 using SymbolicUtils: expand
 using Test
@@ -19,8 +19,8 @@ as = [k_on*(1-g),  # 0 -> g
 binary_vars = [1]
 rn = ReactionSystemMod(t, vars, ps, as, S)
 
-μ = define_μ(2,5)
-M = define_M(2,5)
+μ = define_μ(Moment{2},5)
+M = define_M(Moment{2},5)
 
 sys = generate_raw_moment_eqs(rn, 3)
 expr1 = sys.odes.eqs[4].rhs
